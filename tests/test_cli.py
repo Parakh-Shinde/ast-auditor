@@ -62,3 +62,57 @@ def test_missing_file_returns_two(tmp_path: Path) -> None:
 
     assert result.returncode == 2
     assert "cannot read" in result.stderr
+
+def test_sarif_report_contains_eval_finding(tmp_path):
+    source_file = tmp_path / "vulnerable.py"
+    source_file.write_text(
+        "result = eval(user_input)\n",
+      encoding="utf-8",
+    )
+
+    result = run_cli(
+        "--format",
+        "sarif",
+        str(source_file),
+    )
+
+    assert result.returncode == 1
+
+    report = json.loads(result.stdout)
+
+    assert report["version"] == "2.1.0"
+
+    driver = report["runs"][0]["tool"]["driver"]
+    assert driver["name"] == "AST Auditor"
+
+    rule_ids =  {rule["id"] for rule in driver["rules"]}
+    assert {"PY001","PY002"}.issubset(rule_ids)
+
+    finding = report["runs"][0]["results"][0]
+    assert finding["ruleId"] == "PY001"
+    assert finding["level"] == "error"
+    assert "eval()" in finding["message"]["text"]
+
+    location = finding["locations"][0]["physicalLocation"]
+    assert location["region"]["startLine"] == 1
+    assert location["artifactLocation"]["uri"] == str(source_file)
+
+def test_sarif_report_for_clean_file_has_no_findings(tmp_path):
+    source_file = tmp_path / "clean.py"
+    source_file.write_text(
+        "print('Hello, world!')\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli(
+        "--format",
+        "sarif",
+        str(source_file),
+    )
+
+    assert result.returncode == 0
+
+    report = json.loads(result.stdout)
+
+    assert report["version"] == "2.1.0"
+    assert report["runs"][0]["results"] == []

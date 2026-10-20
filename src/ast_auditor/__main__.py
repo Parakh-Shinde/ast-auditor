@@ -5,6 +5,74 @@ from pathlib import Path
 
 from ast_auditor.scanner import scan_source
 
+RULES = {
+    "PY001": {
+        "name": "DangerousEval",
+        "shortDescription": {"text": "Potentially dangerous eval() call"},
+        "fullDescription": {
+            "text": "eval() can execute dynamically supplied Python expressions."
+        },
+        "defaultConfiguration": {"level": "error"},
+    },
+    "PY002": {
+        "name": "DangerousExec",
+        "shortDescription": {"text": "Potentially dangerous exec() call"},
+        "fullDescription": {
+            "text": "exec() can execute dynamically supplied Python statements."
+        },
+        "defaultConfiguration": {"level": "error"},
+    },
+}
+
+
+def build_sarif(target: str, findings: list) -> dict:
+    """Convert scanner findings into a SARIF 2.1.0 report."""
+    results = []
+
+    for finding in findings:
+        results.append(
+            {
+                "ruleId": finding.rule_id,
+                "level": "error" if finding.severity == "HIGH" else "warning",
+                "message": {"text": finding.message},
+                "locations": [
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {"uri": target},
+                            "region": {"startLine": finding.line},
+                        }
+                    }
+                ],
+            }
+        )
+
+    return {
+        "$schema": (
+            "https://json.schemastore.org/"
+            "sarif-2.1.0.json"
+        ),
+        "version": "2.1.0",
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "AST Auditor",
+                        "version": "0.1.0",
+                        "informationUri": (
+                            "https://github.com/"
+                            "Parakh-Shinde/ast-auditor"
+                        ),
+                        "rules": [
+                            {"id": rule_id, **rule}
+                            for rule_id, rule in RULES.items()
+                        ],
+                    }
+                },
+                "results": results,
+            }
+        ],
+    }
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -17,7 +85,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--format",
-        choices=("text", "json"),
+        choices=("text", "json", "sarif"),
         default="text",
         help="Output format (default: text)",
     )
@@ -53,6 +121,9 @@ def main() -> int:
                 for finding in findings
             ],
         }
+        print(json.dumps(report, indent=2))
+    elif args.format == "sarif":
+        report = build_sarif(str(args.file), findings)
         print(json.dumps(report, indent=2))
     elif not findings:
         print(f"No findings: {args.file}")
