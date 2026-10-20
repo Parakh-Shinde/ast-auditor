@@ -13,65 +13,147 @@ class Finding:
     severity: str
 
 
+class _LocalBindingCollector(ast.NodeVisitor):
+    """Collect names bound in a function without entering nested scopes."""
+
+    def __init__(self) -> None:
+        self.names: set[str] = set()
+
+    def visit_Name(self, node: ast.Name) -> None:
+        if isinstance(node.ctx, (ast.Store, ast.Del)):
+            self.names.add(node.id)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self.names.add(node.name)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self.names.add(node.name)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self.names.add(node.name)
+
+    def visit_Lambda(self, node: ast.Lambda) -> None:
+        return
+
+    def visit_Global(self, node: ast.Global) -> None:
+        self.names.difference_update(node.names)
+
+    def visit_Nonlocal(self, node: ast.Nonlocal) -> None:
+        self.names.difference_update(node.names)
+
+
 class SecurityVisitor(ast.NodeVisitor):
-    """Find direct eval/exec calls and simple aliases."""
+    """Detect eval/exec calls, aliases, and builtins-qualified calls."""
 
     DANGEROUS_FUNCTIONS: ClassVar[set[str]] = {"eval", "exec"}
 
     def __init__(self) -> None:
         self.findings: list[Finding] = []
-        self.aliases: dict[str, str] = {}
+        self.bindings: dict[str, str | None] = {}
+        self.builtins_modules: set[str] = set()
 
-    def _update_alias(self, target: ast.expr, value: ast.expr) -> None:
-        """Track simple assignments without retaining stale aliases."""
-        if not isinstance(target, ast.Name):
-            return
+    def _resolve_dangerous_name(self, name: str) -> str | None:
+        if name in self.bindings:
+            return self.bindings[name]
 
+        if name in self.DANGEROUS_FUNCTIONS:
+            return name
+
+        return None
+
+    def _resolve_expression(self, value: ast.expr) -> str | None:
+        """Resolve a simple name or builtins.eval/builtins.exec expression."""
         if isinstance(value, ast.Name):
-            if value.id in self.DANGEROUS_FUNCTIONS:
-                self.aliases[target.id] = value.id
-                return
+            return self._resolve_dangerous_name(value.id)
 
-            if value.id in self.aliases:
-                self.aliases[target.id] = self.aliases[value.id]
-                return
+        if (
+            isinstance(value, ast.Attribute)
+            and isinstance(value.value, ast.Name)
+            and value.value.id in self.builtins_modules
+            and value.attr in self.DANGEROUS_FUNCTIONS
+        ):
+            return value.attr
 
-        self.aliases.pop(target.id, None)
+        return None
+
+    def _bind_name(self, name: str, value: ast.expr) -> None:
+        """Track aliases and invalidate stale bindings."""
+        is_builtins_module = (
+            isinstance(value, ast.Name)
+            and value.id in self.builtins_modules
+        )
+        dangerous_name = self._resolve_expression(value)
+
+        self.bindings[name] = dangerous_name
+        self.builtins_modules.discard(name)
+
+        if is_builtins_module:
+            self.builtins_modules.add(name)
 
     def visit_Assign(self, node: ast.Assign) -> None:
-        """Handle ordinary assignments."""
         self.visit(node.value)
 
         for target in node.targets:
-            self._update_alias(target, node.value)
-
-        for target in node.targets:
-            if not isinstance(target, ast.Name):
+            if isinstance(target, ast.Name):
+                self._bind_name(target.id, node.value)
+            else:
                 self.visit(target)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
-        """Handle annotated assignments."""
         self.visit(node.annotation)
 
         if node.value is not None:
             self.visit(node.value)
-            self._update_alias(node.target, node.value)
-        elif isinstance(node.target, ast.Name):
-            self.aliases.pop(node.target.id, None)
+
+        if isinstance(node.target, ast.Name):
+            if node.value is None:
+                self.bindings[node.target.id] = None
+                self.builtins_modules.discard(node.target.id)
+            else:
+                self._bind_name(node.target.id, node.value)
         else:
             self.visit(node.target)
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        self._visit_function_in_scope(node)
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
+        self.visit(node.value)
 
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        self._visit_function_in_scope(node)
+        if isinstance(node.target, ast.Name):
+            self._bind_name(node.target.id, node.value)
+        else:
+            self.visit(node.target)
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for item in node.names:
+            bound_name = item.asname or item.name.split(".")[0]
+            self.bindings[bound_name] = None
+            self.builtins_modules.discard(bound_name)
+
+            if item.name == "builtins":
+                self.builtins_modules.add(bound_name)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        for item in node.names:
+            if item.name == "*":
+                continue
+
+            bound_name = item.asname or item.name
+
+            if (
+                node.level == 0
+                and node.module == "builtins"
+                and item.name in self.DANGEROUS_FUNCTIONS
+            ):
+                self.bindings[bound_name] = item.name
+            else:
+                self.bindings[bound_name] = None
+
+            self.builtins_modules.discard(bound_name)
 
     def _visit_function_in_scope(
         self,
         node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> None:
-        """Inspect a function without leaking its alias changes."""
+        """Scan a function with its local names predeclared."""
         for decorator in node.decorator_list:
             self.visit(decorator)
 
@@ -82,18 +164,56 @@ class SecurityVisitor(ast.NodeVisitor):
             if default is not None:
                 self.visit(default)
 
-        parent_aliases = self.aliases
-        parent_aliases.pop(node.name, None)
-        self.aliases = parent_aliases.copy()
+        parent_bindings = self.bindings
+        parent_modules = self.builtins_modules
+
+        # Bind the function name in the enclosing scope.
+        parent_bindings[node.name] = None
+        parent_modules.discard(node.name)
+
+        collector = _LocalBindingCollector()
+        for statement in node.body:
+            collector.visit(statement)
+
+        local_names = collector.names
+        local_names.update(
+            argument.arg
+            for argument in (
+                *node.args.posonlyargs,
+                *node.args.args,
+                *node.args.kwonlyargs,
+            )
+        )
+
+        if node.args.vararg is not None:
+            local_names.add(node.args.vararg.arg)
+
+        if node.args.kwarg is not None:
+            local_names.add(node.args.kwarg.arg)
+
+        self.bindings = parent_bindings.copy()
+        self.builtins_modules = parent_modules.copy()
+
+        # Python treats function-local assignments as local throughout
+        # the function, even when the assignment appears later.
+        for name in local_names:
+            self.bindings[name] = None
+            self.builtins_modules.discard(name)
 
         try:
             for statement in node.body:
                 self.visit(statement)
         finally:
-            self.aliases = parent_aliases
+            self.bindings = parent_bindings
+            self.builtins_modules = parent_modules
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self._visit_function_in_scope(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self._visit_function_in_scope(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        """Analyze a class body without leaking its aliases outward."""
         for decorator in node.decorator_list:
             self.visit(decorator)
 
@@ -103,55 +223,85 @@ class SecurityVisitor(ast.NodeVisitor):
         for keyword in node.keywords:
             self.visit(keyword.value)
 
-        parent_aliases = self.aliases
-        parent_aliases.pop(node.name, None)
-        self.aliases = parent_aliases.copy()
+        parent_bindings = self.bindings
+        parent_modules = self.builtins_modules
+
+        parent_bindings[node.name] = None
+        parent_modules.discard(node.name)
+
+        self.bindings = parent_bindings.copy()
+        self.builtins_modules = parent_modules.copy()
 
         try:
             for statement in node.body:
                 self.visit(statement)
         finally:
-            self.aliases = parent_aliases
+            self.bindings = parent_bindings
+            self.builtins_modules = parent_modules
 
     def visit_Lambda(self, node: ast.Lambda) -> None:
-        """Inspect a lambda body without leaking alias changes."""
-        parent_aliases = self.aliases
-        self.aliases = parent_aliases.copy()
+        parent_bindings = self.bindings
+        parent_modules = self.builtins_modules
+
+        self.bindings = parent_bindings.copy()
+        self.builtins_modules = parent_modules.copy()
+
+        local_names = {
+            argument.arg
+            for argument in (
+                *node.args.posonlyargs,
+                *node.args.args,
+                *node.args.kwonlyargs,
+            )
+        }
+
+        if node.args.vararg is not None:
+            local_names.add(node.args.vararg.arg)
+
+        if node.args.kwarg is not None:
+            local_names.add(node.args.kwarg.arg)
+
+        for name in local_names:
+            self.bindings[name] = None
+            self.builtins_modules.discard(name)
 
         try:
             self.visit(node.body)
         finally:
-            self.aliases = parent_aliases
+            self.bindings = parent_bindings
+            self.builtins_modules = parent_modules
 
     def visit_Call(self, node: ast.Call) -> None:
-        """Report calls to eval/exec or tracked aliases."""
+        dangerous_name = None
+
         if isinstance(node.func, ast.Name):
-            function_name = node.func.id
+            dangerous_name = self._resolve_dangerous_name(node.func.id)
+        elif (
+            isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id in self.builtins_modules
+            and node.func.attr in self.DANGEROUS_FUNCTIONS
+        ):
+            dangerous_name = node.func.attr
 
-            dangerous_function = (
-                function_name
-                if function_name in self.DANGEROUS_FUNCTIONS
-                else self.aliases.get(function_name)
+        if dangerous_name == "eval":
+            self.findings.append(
+                Finding(
+                    rule_id="PY001",
+                    message="Use of eval() may execute untrusted code",
+                    line=node.lineno,
+                    severity="HIGH",
+                )
             )
-
-            if dangerous_function == "eval":
-                self.findings.append(
-                    Finding(
-                        rule_id="PY001",
-                        message="Use of eval() may execute untrusted code",
-                        line=node.lineno,
-                        severity="HIGH",
-                    )
+        elif dangerous_name == "exec":
+            self.findings.append(
+                Finding(
+                    rule_id="PY002",
+                    message="Use of exec() may execute untrusted code",
+                    line=node.lineno,
+                    severity="HIGH",
                 )
-            elif dangerous_function == "exec":
-                self.findings.append(
-                    Finding(
-                        rule_id="PY002",
-                        message="Use of exec() may execute untrusted code",
-                        line=node.lineno,
-                        severity="HIGH",
-                    )
-                )
+            )
 
         self.generic_visit(node)
 

@@ -201,3 +201,54 @@ def test_syntax_error_is_not_silently_ignored() -> None:
 
 def test_empty_source_has_no_findings() -> None:
     assert scan_source("") == []
+
+
+def test_shadowed_eval_name_is_not_reported_as_builtin() -> None:
+    source = """
+eval = print
+eval("Hello")
+"""
+    assert scan_source(source) == []
+
+
+def test_detects_eval_imported_from_builtins() -> None:
+    source = """
+from builtins import eval as run
+run("user_input")
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+    assert findings[0].line == 3
+
+
+def test_detects_qualified_builtins_eval_call() -> None:
+    source = """
+import builtins
+builtins.eval("user_input")
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+    assert findings[0].line == 3
+
+
+def test_local_eval_assignment_shadows_builtin_even_before_assignment() -> None:
+    source = """
+def run():
+    eval("not the builtin")
+    eval = print
+"""
+    assert scan_source(source) == []
+
+
+def test_detects_alias_assigned_from_builtins_eval() -> None:
+    source = """
+import builtins
+run = builtins.eval
+run("user_input")
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+    assert findings[0].line == 4
