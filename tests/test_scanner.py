@@ -288,3 +288,37 @@ def outer():
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
     assert findings[0].line == 9
+
+
+
+def test_nested_function_in_method_resolves_method_local_alias() -> None:
+    source = '''
+class Example:
+    def check(self):
+        run = eval
+
+        def inner():
+            run("user-controlled input")
+'''
+    findings = scan_source(source)
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+    assert findings[0].line == 7
+
+
+def test_nested_class_in_method_resolves_method_local_alias() -> None:
+    source = '''
+class Example:
+    def check(self):
+        run = eval
+
+        class Nested:
+            def inner(self):
+                run("user-controlled input")
+'''
+    findings = scan_source(source)
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+    assert findings[0].line == 8
