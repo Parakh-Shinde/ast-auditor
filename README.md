@@ -7,6 +7,7 @@ AST Auditor is a lightweight, AST-based static security scanner for Python sourc
 - Detects direct calls to `eval()` with rule PY001.
 - Detects direct calls to `exec()` with rule PY002.
 - Detects calls to `pickle.load()` and `pickle.loads()` with rule PY003, including common import aliases.
+- Detects `subprocess` calls with literal `shell=True` and `os.system()` with rule PY004, including common import aliases.
 - Tracks simple and chained aliases in supported cases.
 - Reports severity and source line numbers.
 - Supports text, JSON, and SARIF 2.1.0 output.
@@ -63,7 +64,7 @@ Run lint:
 
 ## Limitations
 
-The scanner detects direct calls to eval() and exec(), along with simple aliases and chained aliases in supported cases. Alias tracking is intentionally lightweight and does not perform complete Python scope, control-flow, or data-flow analysis. It may miss indirect calls, dynamically resolved functions, and other classes of Python security vulnerabilities. PY003 is a targeted check for the standard-library `pickle` API; it does not cover every unsafe deserialization library or custom wrapper.
+The scanner detects direct calls to eval() and exec(), along with simple aliases and chained aliases in supported cases. Alias tracking is intentionally lightweight and does not perform complete Python scope, control-flow, or data-flow analysis. It may miss indirect calls, dynamically resolved functions, and other classes of Python security vulnerabilities. PY003 is a targeted check for the standard-library `pickle` API; it does not cover every unsafe deserialization library or custom wrapper. PY004 detects selected standard-library subprocess APIs when `shell=True` is explicitly written as a literal, plus `os.system()`; it does not perform taint analysis and may miss indirect or dynamically configured shell execution.
 
 A finding indicates potentially dangerous code, not proof of exploitability. This early-stage tool is not a substitute for a comprehensive security audit.
 

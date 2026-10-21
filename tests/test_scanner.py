@@ -414,3 +414,75 @@ loads(data)
 object.load()
 """
     assert scan_source(source) == []
+
+
+
+def test_detects_subprocess_run_with_shell_true() -> None:
+    source = """
+import subprocess
+subprocess.run(user_input, shell=True)
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY004"
+    assert findings[0].severity == "HIGH"
+    assert findings[0].line == 3
+
+
+def test_detects_aliased_subprocess_module_with_shell_true() -> None:
+    source = """
+import subprocess as proc
+proc.Popen(command, shell=True)
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY004"
+
+
+def test_detects_imported_subprocess_function_with_shell_true() -> None:
+    source = """
+from subprocess import run as execute
+execute(command, shell=True)
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY004"
+    assert findings[0].line == 3
+
+
+def test_detects_os_system() -> None:
+    source = """
+import os
+os.system(command)
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY004"
+    assert findings[0].severity == "HIGH"
+
+
+def test_detects_imported_os_system_alias() -> None:
+    source = """
+from os import system as run_command
+run_command(command)
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY004"
+
+
+def test_does_not_flag_subprocess_without_shell_true() -> None:
+    source = """
+import subprocess
+subprocess.run(["echo", user_input])
+subprocess.run(command, shell=False)
+"""
+    assert scan_source(source) == []
+
+
+def test_does_not_flag_unrelated_run_with_shell_true() -> None:
+    source = """
+from my_library import run
+run(command, shell=True)
+"""
+    assert scan_source(source) == []

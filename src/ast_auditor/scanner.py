@@ -46,6 +46,9 @@ class SecurityVisitor(ast.NodeVisitor):
     """Detect eval/exec calls, aliases, and builtins-qualified calls."""
 
     DANGEROUS_FUNCTIONS: ClassVar[set[str]] = {"eval", "exec"}
+    SUBPROCESS_FUNCTIONS: ClassVar[set[str]] = {
+        "run", "Popen", "call", "check_call", "check_output"
+    }
 
     def __init__(self) -> None:
         self.findings: list[Finding] = []
@@ -82,6 +85,15 @@ class SecurityVisitor(ast.NodeVisitor):
                 and value.attr in {"load", "loads"}
             ):
                 return f"pickle.{value.attr}"
+
+            module_binding = self._resolve_dangerous_name(value.value.id)
+            if (
+                module_binding == "subprocess_module"
+                and value.attr in self.SUBPROCESS_FUNCTIONS
+            ):
+                return f"subprocess.{value.attr}"
+            if module_binding == "os_module" and value.attr == "system":
+                return "os.system"
 
         return None
 
@@ -173,6 +185,10 @@ class SecurityVisitor(ast.NodeVisitor):
                 self.builtins_modules.add(bound_name)
             elif item.name == "pickle":
                 self.bindings[bound_name] = "pickle_module"
+            elif item.name == "subprocess":
+                self.bindings[bound_name] = "subprocess_module"
+            elif item.name == "os":
+                self.bindings[bound_name] = "os_module"
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         for item in node.names:
@@ -193,6 +209,14 @@ class SecurityVisitor(ast.NodeVisitor):
                 and item.name in {"load", "loads"}
             ):
                 self.bindings[bound_name] = f"pickle.{item.name}"
+            elif (
+                node.level == 0
+                and node.module == "subprocess"
+                and item.name in self.SUBPROCESS_FUNCTIONS
+            ):
+                self.bindings[bound_name] = f"subprocess.{item.name}"
+            elif node.level == 0 and node.module == "os" and item.name == "system":
+                self.bindings[bound_name] = "os.system"
             else:
                 self.bindings[bound_name] = None
 
@@ -351,7 +375,31 @@ class SecurityVisitor(ast.NodeVisitor):
     def visit_Call(self, node: ast.Call) -> None:
         dangerous_name = self._resolve_expression(node.func)
 
-        if dangerous_name in {"pickle.load", "pickle.loads"}:
+        shell_enabled = any(
+            keyword.arg == "shell"
+            and isinstance(keyword.value, ast.Constant)
+            and keyword.value.value is True
+            for keyword in node.keywords
+        )
+        if dangerous_name == "os.system" or (
+            dangerous_name is not None
+            and dangerous_name.startswith("subprocess.")
+            and shell_enabled
+        ):
+            self.findings.append(
+                Finding(
+                    rule_id="PY004",
+                    message=(
+                        "Shell command execution can enable command injection; "
+                        "avoid shell=True with untrusted input"
+                        if dangerous_name != "os.system"
+                        else "os.system() executes a command through a system shell"
+                    ),
+                    line=node.lineno,
+                    severity="HIGH",
+                )
+            )
+        elif dangerous_name in {"pickle.load", "pickle.loads"}:
             self.findings.append(
                 Finding(
                     rule_id="PY003",
