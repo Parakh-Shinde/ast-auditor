@@ -54,6 +54,7 @@ class SecurityVisitor(ast.NodeVisitor):
         self._class_outer_scopes: list[
             tuple[dict[str, str | None], set[str]]
         ] = []
+        self._class_namespace_bindings: list[dict[str, str | None]] = []
 
     def _resolve_dangerous_name(self, name: str) -> str | None:
         if name in self.bindings:
@@ -196,7 +197,11 @@ class SecurityVisitor(ast.NodeVisitor):
 
         # Methods skip the class namespace during name resolution.
         # Preserve the enclosing lexical environment for method bodies.
-        if self._class_outer_scopes:
+        if (
+            self._class_outer_scopes
+            and self._class_namespace_bindings
+            and parent_bindings is self._class_namespace_bindings[-1]
+        ):
             lexical_bindings, lexical_modules = self._class_outer_scopes[-1]
         else:
             lexical_bindings, lexical_modules = parent_bindings, parent_modules
@@ -241,7 +246,11 @@ class SecurityVisitor(ast.NodeVisitor):
 
         # Class namespaces are not enclosing lexical scopes for methods.
         # A method can still close over a function surrounding the class.
-        if self._class_outer_scopes:
+        if (
+            self._class_outer_scopes
+            and self._class_namespace_bindings
+            and parent_bindings is self._class_namespace_bindings[-1]
+        ):
             lexical_bindings, lexical_modules = self._class_outer_scopes[-1]
         else:
             lexical_bindings, lexical_modules = parent_bindings, parent_modules
@@ -251,11 +260,13 @@ class SecurityVisitor(ast.NodeVisitor):
         )
         self.bindings = parent_bindings.copy()
         self.builtins_modules = parent_modules.copy()
+        self._class_namespace_bindings.append(self.bindings)
 
         try:
             for statement in node.body:
                 self.visit(statement)
         finally:
+            self._class_namespace_bindings.pop()
             self._class_outer_scopes.pop()
             self.bindings = parent_bindings
             self.builtins_modules = parent_modules
