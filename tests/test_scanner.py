@@ -322,3 +322,31 @@ class Example:
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
     assert findings[0].line == 8
+
+
+
+def test_destructuring_assignment_invalidates_stale_alias() -> None:
+    source = """
+run = eval
+run, other = print, 1
+run("Hello")
+"""
+    assert scan_source(source) == []
+
+
+def test_delete_invalidates_stale_alias() -> None:
+    source = """
+run = eval
+del run
+run("Hello")
+"""
+    assert scan_source(source) == []
+
+
+def test_augmented_assignment_invalidates_stale_alias() -> None:
+    source = """
+run = eval
+run += print
+run("Hello")
+"""
+    assert scan_source(source) == []
