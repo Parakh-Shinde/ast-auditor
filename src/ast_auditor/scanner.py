@@ -94,6 +94,27 @@ class SecurityVisitor(ast.NodeVisitor):
         if is_builtins_module:
             self.builtins_modules.add(name)
 
+    @staticmethod
+    def _target_names(target: ast.expr) -> set[str]:
+        """Return names assigned by a simple or destructuring target."""
+        if isinstance(target, ast.Name):
+            return {target.id}
+        if isinstance(target, (ast.Tuple, ast.List)):
+            return {
+                name
+                for element in target.elts
+                for name in SecurityVisitor._target_names(element)
+            }
+        if isinstance(target, ast.Starred):
+            return SecurityVisitor._target_names(target.value)
+        return set()
+
+    def _invalidate_target(self, target: ast.expr) -> None:
+        """Invalidate aliases for assignments we cannot resolve precisely."""
+        for name in self._target_names(target):
+            self.bindings[name] = None
+            self.builtins_modules.discard(name)
+
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
 
@@ -101,7 +122,18 @@ class SecurityVisitor(ast.NodeVisitor):
             if isinstance(target, ast.Name):
                 self._bind_name(target.id, node.value)
             else:
+                self._invalidate_target(target)
                 self.visit(target)
+
+    def visit_AugAssign(self, node: ast.AugAssign) -> None:
+        self.visit(node.value)
+        self._invalidate_target(node.target)
+        self.visit(node.target)
+
+    def visit_Delete(self, node: ast.Delete) -> None:
+        for target in node.targets:
+            self._invalidate_target(target)
+            self.visit(target)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
         self.visit(node.annotation)
