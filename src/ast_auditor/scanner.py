@@ -70,13 +70,18 @@ class SecurityVisitor(ast.NodeVisitor):
         if isinstance(value, ast.Name):
             return self._resolve_dangerous_name(value.id)
 
-        if (
-            isinstance(value, ast.Attribute)
-            and isinstance(value.value, ast.Name)
-            and value.value.id in self.builtins_modules
-            and value.attr in self.DANGEROUS_FUNCTIONS
-        ):
-            return value.attr
+        if isinstance(value, ast.Attribute) and isinstance(value.value, ast.Name):
+            if (
+                value.value.id in self.builtins_modules
+                and value.attr in self.DANGEROUS_FUNCTIONS
+            ):
+                return value.attr
+
+            if (
+                self._resolve_dangerous_name(value.value.id) == "pickle_module"
+                and value.attr in {"load", "loads"}
+            ):
+                return f"pickle.{value.attr}"
 
         return None
 
@@ -166,6 +171,8 @@ class SecurityVisitor(ast.NodeVisitor):
 
             if item.name == "builtins":
                 self.builtins_modules.add(bound_name)
+            elif item.name == "pickle":
+                self.bindings[bound_name] = "pickle_module"
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         for item in node.names:
@@ -180,6 +187,12 @@ class SecurityVisitor(ast.NodeVisitor):
                 and item.name in self.DANGEROUS_FUNCTIONS
             ):
                 self.bindings[bound_name] = item.name
+            elif (
+                node.level == 0
+                and node.module == "pickle"
+                and item.name in {"load", "loads"}
+            ):
+                self.bindings[bound_name] = f"pickle.{item.name}"
             else:
                 self.bindings[bound_name] = None
 
@@ -336,19 +349,21 @@ class SecurityVisitor(ast.NodeVisitor):
             self.builtins_modules = parent_modules
 
     def visit_Call(self, node: ast.Call) -> None:
-        dangerous_name = None
+        dangerous_name = self._resolve_expression(node.func)
 
-        if isinstance(node.func, ast.Name):
-            dangerous_name = self._resolve_dangerous_name(node.func.id)
-        elif (
-            isinstance(node.func, ast.Attribute)
-            and isinstance(node.func.value, ast.Name)
-            and node.func.value.id in self.builtins_modules
-            and node.func.attr in self.DANGEROUS_FUNCTIONS
-        ):
-            dangerous_name = node.func.attr
-
-        if dangerous_name == "eval":
+        if dangerous_name in {"pickle.load", "pickle.loads"}:
+            self.findings.append(
+                Finding(
+                    rule_id="PY003",
+                    message=(
+                        "Pickle deserialization can execute code when loading "
+                        "untrusted data"
+                    ),
+                    line=node.lineno,
+                    severity="HIGH",
+                )
+            )
+        elif dangerous_name == "eval":
             self.findings.append(
                 Finding(
                     rule_id="PY001",

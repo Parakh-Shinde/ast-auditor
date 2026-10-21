@@ -1,11 +1,12 @@
 # AST Auditor
 
-AST Auditor is a lightweight, AST-based static security scanner for Python source code. It parses source files without executing them and identifies potentially dangerous direct calls to `eval()` and `exec()`.
+AST Auditor is a lightweight, AST-based static security scanner for Python source code. It parses source files without executing them and identifies potentially dangerous calls to `eval()` and `exec()`, plus selected unsafe deserialization calls.
 
 ## Features
 
 - Detects direct calls to `eval()` with rule PY001.
 - Detects direct calls to `exec()` with rule PY002.
+- Detects calls to `pickle.load()` and `pickle.loads()` with rule PY003, including common import aliases.
 - Tracks simple and chained aliases in supported cases.
 - Reports severity and source line numbers.
 - Supports text, JSON, and SARIF 2.1.0 output.
@@ -62,7 +63,7 @@ Run lint:
 
 ## Limitations
 
-The scanner detects direct calls to eval() and exec(), along with simple aliases and chained aliases in supported cases. Alias tracking is intentionally lightweight and does not perform complete Python scope, control-flow, or data-flow analysis. It may miss indirect calls, dynamically resolved functions, and other classes of Python security vulnerabilities.
+The scanner detects direct calls to eval() and exec(), along with simple aliases and chained aliases in supported cases. Alias tracking is intentionally lightweight and does not perform complete Python scope, control-flow, or data-flow analysis. It may miss indirect calls, dynamically resolved functions, and other classes of Python security vulnerabilities. PY003 is a targeted check for the standard-library `pickle` API; it does not cover every unsafe deserialization library or custom wrapper.
 
 A finding indicates potentially dangerous code, not proof of exploitability. This early-stage tool is not a substitute for a comprehensive security audit.
 

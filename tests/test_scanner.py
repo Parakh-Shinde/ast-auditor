@@ -350,3 +350,67 @@ run += print
 run("Hello")
 """
     assert scan_source(source) == []
+
+
+def test_detects_pickle_load_and_loads() -> None:
+    source = """
+import pickle
+pickle.load(handle)
+pickle.loads(data)
+"""
+    findings = scan_source(source)
+    assert [finding.rule_id for finding in findings] == ["PY003", "PY003"]
+    assert [finding.line for finding in findings] == [3, 4]
+    assert all(finding.severity == "HIGH" for finding in findings)
+
+
+def test_detects_aliased_pickle_module() -> None:
+    source = """
+import pickle as serialization
+serialization.loads(data)
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY003"
+    assert findings[0].line == 3
+
+
+def test_detects_pickle_functions_imported_with_aliases() -> None:
+    source = """
+from pickle import load as read_object, loads
+read_object(handle)
+loads(data)
+"""
+    findings = scan_source(source)
+    assert [finding.rule_id for finding in findings] == ["PY003", "PY003"]
+    assert [finding.line for finding in findings] == [3, 4]
+
+
+def test_tracks_alias_of_pickle_module() -> None:
+    source = """
+import pickle as serialization
+codec = serialization
+codec.load(handle)
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY003"
+    assert findings[0].line == 4
+
+
+def test_pickle_alias_reassignment_removes_finding() -> None:
+    source = """
+from pickle import loads as decode
+decode = json.loads
+decode(data)
+"""
+    assert scan_source(source) == []
+
+
+def test_does_not_flag_unrelated_load_functions() -> None:
+    source = """
+from json import loads
+loads(data)
+object.load()
+"""
+    assert scan_source(source) == []
