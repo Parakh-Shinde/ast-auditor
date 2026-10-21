@@ -252,3 +252,39 @@ run("user_input")
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
     assert findings[0].line == 4
+
+
+
+def test_method_does_not_resolve_names_from_class_namespace() -> None:
+    source = '''
+run = eval
+
+class Example:
+    run = print
+
+    def check(self):
+        run("user-controlled input")
+'''
+    findings = scan_source(source)
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+    assert findings[0].line == 8
+
+
+def test_method_resolves_alias_from_enclosing_function() -> None:
+    source = '''
+def outer():
+    run = eval
+
+    class Example:
+        run = print
+
+        def check(self):
+            run("user-controlled input")
+'''
+    findings = scan_source(source)
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+    assert findings[0].line == 9

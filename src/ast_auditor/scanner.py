@@ -51,6 +51,9 @@ class SecurityVisitor(ast.NodeVisitor):
         self.findings: list[Finding] = []
         self.bindings: dict[str, str | None] = {}
         self.builtins_modules: set[str] = set()
+        self._class_outer_scopes: list[
+            tuple[dict[str, str | None], set[str]]
+        ] = []
 
     def _resolve_dangerous_name(self, name: str) -> str | None:
         if name in self.bindings:
@@ -191,8 +194,15 @@ class SecurityVisitor(ast.NodeVisitor):
         if node.args.kwarg is not None:
             local_names.add(node.args.kwarg.arg)
 
-        self.bindings = parent_bindings.copy()
-        self.builtins_modules = parent_modules.copy()
+        # Methods skip the class namespace during name resolution.
+        # Preserve the enclosing lexical environment for method bodies.
+        if self._class_outer_scopes:
+            lexical_bindings, lexical_modules = self._class_outer_scopes[-1]
+        else:
+            lexical_bindings, lexical_modules = parent_bindings, parent_modules
+
+        self.bindings = lexical_bindings.copy()
+        self.builtins_modules = lexical_modules.copy()
 
         # Python treats function-local assignments as local throughout
         # the function, even when the assignment appears later.
@@ -229,6 +239,16 @@ class SecurityVisitor(ast.NodeVisitor):
         parent_bindings[node.name] = None
         parent_modules.discard(node.name)
 
+        # Class namespaces are not enclosing lexical scopes for methods.
+        # A method can still close over a function surrounding the class.
+        if self._class_outer_scopes:
+            lexical_bindings, lexical_modules = self._class_outer_scopes[-1]
+        else:
+            lexical_bindings, lexical_modules = parent_bindings, parent_modules
+
+        self._class_outer_scopes.append(
+            (lexical_bindings.copy(), lexical_modules.copy())
+        )
         self.bindings = parent_bindings.copy()
         self.builtins_modules = parent_modules.copy()
 
@@ -236,6 +256,7 @@ class SecurityVisitor(ast.NodeVisitor):
             for statement in node.body:
                 self.visit(statement)
         finally:
+            self._class_outer_scopes.pop()
             self.bindings = parent_bindings
             self.builtins_modules = parent_modules
 
