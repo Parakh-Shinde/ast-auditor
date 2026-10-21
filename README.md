@@ -62,7 +62,7 @@ Run lint:
 
 ## Limitations
 
-The scanner detects direct calls to eval() and exec(), along with simple aliases and chained aliases in supported cases. Alias tracking is intentionally lightweight and does not perform complete Python scope, control-flow, or data-flow analysis. It may miss indirect calls, dynamically resolved functions, and other classes of Python security vulnerabilities.
+The scanner detects direct calls to eval() and exec(), along with simple aliases and chained aliases in supported cases. Alias tracking is intentionally lightweight and does not perform complete Python scope, control-flow, or data-flow analysis. It may miss indirect calls, dynamically resolved functions, and other classes of Python security vulnerabilities. PY003 is a targeted check for the standard-library `pickle` API; it does not cover every unsafe deserialization library or custom wrapper.
 
 A finding indicates potentially dangerous code, not proof of exploitability. This early-stage tool is not a substitute for a comprehensive security audit.
 
