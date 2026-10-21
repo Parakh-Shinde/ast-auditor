@@ -41,8 +41,44 @@ jobs:
 
       - name: Validate JSON and SARIF output
         run: |
+          set +e
           python -m ast_auditor --format json samples/vulnerable_example.py > /tmp/report.json
+          json_status=$?
           python -m ast_auditor --format sarif samples/vulnerable_example.py > /tmp/report.sarif
+          sarif_status=$?
+          set -e
+
           python -m json.tool /tmp/report.json > /dev/null
           python -m json.tool /tmp/report.sarif > /dev/null
-          echo "JSON and SARIF syntax checks passed"
+
+          python - <<'PYTHON'
+          import json
+
+          with open("/tmp/report.json", encoding="utf-8") as file:
+              report = json.load(file)
+
+          with open("/tmp/report.sarif", encoding="utf-8") as file:
+              sarif = json.load(file)
+
+          assert report.get("findings_count", 0) > 0, (
+              "Expected security findings in the JSON report"
+          )
+          results = [
+              result
+              for run in sarif.get("runs", [])
+              for result in run.get("results", [])
+          ]
+          assert results, "Expected security findings in the SARIF report"
+          print("JSON and SARIF are valid and contain findings.")
+          PYTHON
+
+          test "$json_status" -eq 1 || {
+            echo "Expected JSON scan exit code 1; got $json_status"
+            exit 1
+          }
+          test "$sarif_status" -eq 1 || {
+            echo "Expected SARIF scan exit code 1; got $sarif_status"
+            exit 1
+          }
+
+          echo "JSON and SARIF validation passed."
