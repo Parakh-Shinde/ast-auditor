@@ -68,8 +68,31 @@ jobs:
               for run in sarif.get("runs", [])
               for result in run.get("results", [])
           ]
+
           assert results, "Expected security findings in the SARIF report"
-          print("JSON and SARIF are valid and contain findings.")
+
+          for run in sarif.get("runs", []):
+              driver = run.get("tool", {}).get("driver", {})
+              declared_rule_ids = {
+                  rule["id"] for rule in driver.get("rules", [])
+              }
+              result_rule_ids = {
+                  result["ruleId"]
+                  for result in run.get("results", [])
+                  if "ruleId" in result
+              }
+
+              undeclared_rule_ids = result_rule_ids - declared_rule_ids
+              assert not undeclared_rule_ids, (
+                  "SARIF results reference undeclared rules: "
+                  f"{sorted(undeclared_rule_ids)}"
+              )
+
+          print(
+              "JSON and SARIF are valid, contain findings, "
+              "and all SARIF rule references are declared."
+          )
+
           PYTHON
 
           test "$json_status" -eq 1 || {

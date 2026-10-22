@@ -22,6 +22,42 @@ RULES = {
         },
         "defaultConfiguration": {"level": "error"},
     },
+    "PY003": {
+        "name": "UnsafePickleDeserialization",
+        "shortDescription": {
+            "text": "Potentially unsafe pickle deserialization"
+        },
+        "fullDescription": {
+            "text": "Loading untrusted pickle data can execute arbitrary code."
+        },
+        "defaultConfiguration": {"level": "error"},
+    },
+    "PY004": {
+        "name": "ShellCommandExecution",
+        "shortDescription": {
+            "text": "Potentially unsafe shell command execution"
+        },
+        "fullDescription": {
+            "text": (
+                "Shell execution can enable command injection when commands "
+                "contain untrusted input."
+            )
+        },
+        "defaultConfiguration": {"level": "error"},
+    },
+    "PY005": {
+        "name": "UnsafeYamlLoad",
+        "shortDescription": {
+            "text": "Potentially unsafe YAML deserialization"
+        },
+        "fullDescription": {
+            "text": (
+                "yaml.load() without a recognized safe loader may deserialize "
+                "untrusted data unsafely."
+            )
+        },
+        "defaultConfiguration": {"level": "error"},
+    },
 }
 
 

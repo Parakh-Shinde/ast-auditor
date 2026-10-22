@@ -116,3 +116,35 @@ def test_sarif_report_for_clean_file_has_no_findings(tmp_path):
 
     assert report["version"] == "2.1.0"
     assert report["runs"][0]["results"] == []
+
+
+def test_sarif_declares_every_rule_used_by_findings(tmp_path: Path) -> None:
+    source_file = tmp_path / "all_rules.py"
+    source_file.write_text(
+        """
+import pickle
+import subprocess
+import yaml
+
+eval(user_input)
+exec(user_input)
+pickle.loads(data)
+subprocess.run(command, shell=True)
+yaml.load(data)
+""",
+        encoding="utf-8",
+    )
+
+    result = run_cli("--format", "sarif", str(source_file))
+
+    assert result.returncode == 1
+    report = json.loads(result.stdout)
+    driver = report["runs"][0]["tool"]["driver"]
+
+    declared_rule_ids = {rule["id"] for rule in driver["rules"]}
+    result_rule_ids = {
+        finding["ruleId"] for finding in report["runs"][0]["results"]
+    }
+
+    assert {"PY001", "PY002", "PY003", "PY004", "PY005"} <= result_rule_ids
+    assert result_rule_ids <= declared_rule_ids
