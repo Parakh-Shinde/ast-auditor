@@ -49,6 +49,7 @@ class SecurityVisitor(ast.NodeVisitor):
     SUBPROCESS_FUNCTIONS: ClassVar[set[str]] = {
         "run", "Popen", "call", "check_call", "check_output"
     }
+    YAML_SAFE_LOADERS: ClassVar[set[str]] = {"SafeLoader", "CSafeLoader"}
 
     def __init__(self) -> None:
         self.findings: list[Finding] = []
@@ -80,11 +81,16 @@ class SecurityVisitor(ast.NodeVisitor):
             ):
                 return value.attr
 
-            if (
-                self._resolve_dangerous_name(value.value.id) == "pickle_module"
-                and value.attr in {"load", "loads"}
-            ):
+            module_binding = self._resolve_dangerous_name(value.value.id)
+            if module_binding == "pickle_module" and value.attr in {"load", "loads"}:
                 return f"pickle.{value.attr}"
+            if module_binding == "yaml_module" and value.attr == "load":
+                return "yaml.load"
+            if (
+                module_binding == "yaml_module"
+                and value.attr in self.YAML_SAFE_LOADERS
+            ):
+                return "yaml_safe_loader"
 
             module_binding = self._resolve_dangerous_name(value.value.id)
             if (
@@ -185,6 +191,8 @@ class SecurityVisitor(ast.NodeVisitor):
                 self.builtins_modules.add(bound_name)
             elif item.name == "pickle":
                 self.bindings[bound_name] = "pickle_module"
+            elif item.name == "yaml":
+                self.bindings[bound_name] = "yaml_module"
             elif item.name == "subprocess":
                 self.bindings[bound_name] = "subprocess_module"
             elif item.name == "os":
@@ -209,6 +217,8 @@ class SecurityVisitor(ast.NodeVisitor):
                 and item.name in {"load", "loads"}
             ):
                 self.bindings[bound_name] = f"pickle.{item.name}"
+            elif node.level == 0 and node.module == "yaml" and item.name == "load":
+                self.bindings[bound_name] = "yaml.load"
             elif (
                 node.level == 0
                 and node.module == "subprocess"
@@ -399,6 +409,28 @@ class SecurityVisitor(ast.NodeVisitor):
                     severity="HIGH",
                 )
             )
+        elif dangerous_name == "yaml.load":
+            loader_keyword = next(
+                (keyword for keyword in node.keywords if keyword.arg == "Loader"),
+                None,
+            )
+            safe_loader = (
+                loader_keyword is not None
+                and self._resolve_expression(loader_keyword.value)
+                == "yaml_safe_loader"
+            )
+            if not safe_loader:
+                self.findings.append(
+                    Finding(
+                        rule_id="PY005",
+                        message=(
+                            "yaml.load() may deserialize untrusted data "
+                            "unsafely; use safe_load() or a verified safe loader"
+                        ),
+                        line=node.lineno,
+                        severity="HIGH",
+                    )
+                )
         elif dangerous_name in {"pickle.load", "pickle.loads"}:
             self.findings.append(
                 Finding(
