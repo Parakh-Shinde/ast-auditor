@@ -486,3 +486,119 @@ from my_library import run
 run(command, shell=True)
 """
     assert scan_source(source) == []
+
+
+def test_detects_yaml_load_without_explicit_loader() -> None:
+    source = "import yaml\nyaml.load(data)\n"
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY005"
+    assert findings[0].severity == "HIGH"
+
+
+def test_detects_explicit_unsafe_yaml_loader() -> None:
+    source = "import yaml\nyaml.load(data, Loader=yaml.Loader)\n"
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY005"
+
+
+def test_detects_aliased_yaml_module() -> None:
+    source = "import yaml as y\ny.load(data)\n"
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY005"
+
+
+def test_detects_imported_yaml_load_alias() -> None:
+    source = "from yaml import load as parse_yaml\nparse_yaml(data)\n"
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY005"
+
+
+def test_does_not_flag_yaml_safe_load() -> None:
+    source = "import yaml\nyaml.safe_load(data)\n"
+    assert scan_source(source) == []
+
+
+def test_does_not_flag_yaml_load_with_safe_loader() -> None:
+    source = "import yaml\nyaml.load(data, Loader=yaml.SafeLoader)\n"
+    assert scan_source(source) == []
+
+
+def test_does_not_flag_yaml_load_with_aliased_safe_loader() -> None:
+    source = """
+import yaml
+safe_loader = yaml.SafeLoader
+yaml.load(data, Loader=safe_loader)
+"""
+    assert scan_source(source) == []
+
+
+def test_tracks_yaml_module_alias_assignment() -> None:
+    source = """
+import yaml
+parser = yaml
+parser.load(data)
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY005"
+
+
+def test_yaml_load_alias_reassignment_removes_finding() -> None:
+    source = """
+from yaml import load as parse_yaml
+parse_yaml = print
+parse_yaml(data)
+"""
+    assert scan_source(source) == []
+
+
+def test_does_not_flag_unrelated_load_method() -> None:
+    source = """
+other.load(data)
+"""
+    assert scan_source(source) == []
+
+
+def test_does_not_flag_yaml_load_with_c_safe_loader() -> None:
+    source = """
+import yaml
+yaml.load(data, Loader=yaml.CSafeLoader)
+"""
+    assert scan_source(source) == []
+
+
+def test_yaml_module_alias_reassignment_invalidates_binding() -> None:
+    source = """
+import yaml
+parser = yaml
+parser = other
+parser.load(data)
+"""
+    assert scan_source(source) == []
+
+
+def test_function_local_yaml_name_does_not_use_global_alias() -> None:
+    source = """
+import yaml
+
+def parse(data):
+    yaml = other
+    yaml.load(data)
+"""
+    assert scan_source(source) == []
+
+
+def test_yaml_safe_loader_alias_reassignment_is_not_trusted() -> None:
+    source = """
+import yaml
+safe_loader = yaml.SafeLoader
+safe_loader = yaml.Loader
+yaml.load(data, Loader=safe_loader)
+"""
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY005"
