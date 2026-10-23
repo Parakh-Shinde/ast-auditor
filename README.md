@@ -1,6 +1,8 @@
 # AST Auditor
 
-AST Auditor is a lightweight, AST-based static security scanner for Python source code. It parses source files without executing them and identifies potentially dangerous calls to `eval()` and `exec()`, plus selected unsafe deserialization calls.
+**AST Auditor** is a lightweight, AST-based static security scanner for Python. It inspects source code without executing the scanned program and reports selected potentially dangerous function calls.
+
+The project demonstrates Python security analysis, lightweight alias tracking, command-line tooling, automated testing, and CI validation.
 
 ## Features
 
@@ -13,6 +15,18 @@ AST Auditor is a lightweight, AST-based static security scanner for Python sourc
 - Reports severity and source line numbers.
 - Supports text, JSON, and SARIF 2.1.0 output.
 - Includes automated scanner and CLI tests.
+
+## Detection rules
+
+| Rule | Detection | Severity |
+|---|---|---|
+| PY001 | Potentially dangerous `eval()` calls | HIGH |
+| PY002 | Potentially dangerous `exec()` calls | HIGH |
+| PY003 | Selected `pickle.load()` and `pickle.loads()` calls | HIGH |
+| PY004 | Selected `subprocess` calls with literal `shell=True`, and `os.system()` | HIGH |
+| PY005 | Potentially unsafe `yaml.load()` calls when a recognized safe loader cannot be established | HIGH |
+
+These rules identify potentially dangerous code patterns. A finding is not proof that a vulnerability is exploitable.
 
 ## Requirements
 
@@ -71,4 +85,4 @@ A finding indicates potentially dangerous code, not proof of exploitability. Thi
 
 ## License
 
-MIT
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
