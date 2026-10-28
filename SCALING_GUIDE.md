@@ -1,12 +1,13 @@
 # Scaling guide
 
-## What is implemented in v0.3.0
+## What is implemented in v0.4.0
 
 - Single-file and repository-directory scans.
 - Process-based parallel analysis with bounded in-flight work.
 - Stable, sorted output; common generated/dependency directory exclusions; configurable glob excludes and file-size limits.
 - Per-file parse/read error reporting and file-specific JSON/SARIF findings.
 - A central rule registry with stable IDs, a versioned rule pack, CWE mapping, severity, confidence, remediation, and references.
+- Six curated rules, including detection of literal `verify=False` in recognized module-level `requests` and `httpx` calls.
 - Registry-driven JSON/SARIF metadata and `--list-rules` output.
 - Regression tests and a synthetic benchmark harness.
 
@@ -33,4 +34,4 @@
 
 ## Important boundaries
 
-AST Auditor is an independent project inspired by public secure-coding guidance. It does not include or claim access to proprietary Google, Meta, or other company-internal rules. The current implementation has five curated Python rules and is not a complete SAST engine.
+AST Auditor is an independent project inspired by public secure-coding guidance. It does not include or claim access to proprietary Google, Meta, or other company-internal rules. The current implementation has six curated Python rules and is not a complete SAST engine.
