@@ -12,8 +12,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_package_and_rule_pack_versions_are_explicit() -> None:
-    assert __version__ == "0.3.0"
-    assert RULE_PACK_VERSION == "2026.1"
+    assert __version__ == "0.4.0"
+    assert RULE_PACK_VERSION == "2026.2"
 
 
 def test_registry_has_unique_stable_rule_ids_and_complete_metadata() -> None:
@@ -21,7 +21,7 @@ def test_registry_has_unique_stable_rule_ids_and_complete_metadata() -> None:
     ids = [rule.rule_id for rule in rules]
 
     assert ids == sorted(ids)
-    assert len(ids) == len(set(ids)) == 5
+    assert len(ids) == len(set(ids)) == 6
     for rule in rules:
         assert rule.name
         assert rule.title
