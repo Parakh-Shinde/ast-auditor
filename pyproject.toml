@@ -9,6 +9,23 @@ description = "A rule-registry-driven AST security scanner for Python repositori
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+keywords = ["application-security", "ast", "sast", "security-scanner", "python"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+]
 dependencies = []
 
 [project.optional-dependencies]
@@ -17,6 +34,12 @@ dev = [
     "ruff>=0.8",
     "jsonschema>=4.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Parakh-Shinde/ast-auditor"
+Repository = "https://github.com/Parakh-Shinde/ast-auditor"
+Issues = "https://github.com/Parakh-Shinde/ast-auditor/issues"
+Changelog = "https://github.com/Parakh-Shinde/ast-auditor/blob/main/CHANGELOG.md"
 
 [project.scripts]
 ast-auditor = "ast_auditor.command_line:main"

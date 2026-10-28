@@ -2,36 +2,47 @@
 
 ## Scope
 
-This document describes the supplied project archive and the v0.3.0 changes. It is not a third-party certification, a complete security audit, or evidence that the scanner is equivalent to any company's internal tooling.
+This is a maintainer-authored engineering review of the current project, not a third-party audit, certification, or proof of equivalence to proprietary security tooling. It documents design boundaries and the checks required before a release.
 
-## v0.4.0 engineering changes
+## Current implementation
 
-- Added PY006 for literal `verify=False` in recognized module-level `requests` and `httpx` request functions.
-- Added positive and negative regression tests; bumped package version to `0.4.0` and rule pack to `2026.2`.
+- Six curated Python rules (PY001–PY006), driven by a central registry.
+- AST parsing; scanned source is not imported or executed.
+- Lightweight alias tracking for selected APIs; this is not general semantic, taint, or interprocedural analysis.
+- CLI output in text, JSON, and SARIF 2.1.0.
+- Repository scanning with exclusions, per-file size limits, process-based parallelism, and bounded in-flight work.
+- CI coverage for Python 3.10–3.14, Ruff, regression tests, JSON/SARIF output checks, official SARIF schema validation, and source/wheel distribution inspection.
+- Project metadata and repository links declared in `pyproject.toml`; Dependabot configured for weekly pip and GitHub Actions update checks.
 
-## v0.3.0 engineering changes
+## Rule-specific boundaries
 
-- Added `rules.py` as a central registry with rule-pack version, stable IDs, severity, confidence, CWE, category, remediation, references, and SARIF metadata.
-- Added `--list-rules` and `--version` CLI options.
-- JSON findings include registry-backed triage metadata.
-- SARIF rule metadata is generated from the same registry to reduce drift between detections and reports.
-- Renamed implementation, test, benchmark, and documentation files to describe their purpose more clearly. Standard Python/GitHub names were retained where tooling expects them.
-- Added registry tests and retained existing scanner regression coverage.
+- **PY001 / PY002:** detect selected dynamic `eval` / `exec` call patterns; reflective access and arbitrary dynamic dispatch may evade detection.
+- **PY003:** covers selected `pickle` deserialization APIs, not every unsafe serialization format or wrapper.
+- **PY004:** covers selected shell-execution APIs and patterns; it does not prove whether input is attacker-controlled.
+- **PY005:** covers selected potentially unsafe `yaml.load()` patterns and recognized safe-loader forms; behavior in custom wrappers or dynamic aliases may not be resolved.
+- **PY006:** recognizes literal `verify=False` in selected module-level `requests` and `httpx` request calls; client-instance methods, dynamic values, and custom wrappers are not resolved.
 
-## Confirm before release
+A finding is a review lead, not proof of exploitability. False positives and false negatives are expected for a deliberately narrow AST scanner.
 
-- Run the full test suite and Ruff on the target operating system and supported Python versions.
-- Validate JSON and SARIF with a schema validator or code-scanning consumer, not only a JSON parser.
-- Review every rule's true-positive and safe-negative examples.
-- Run benchmarks on representative repositories; synthetic tests alone are insufficient for scale claims.
-- Check dependency and build artifacts before publishing a release.
-- Compare changes against the user's original working tree and preserve local backups before any merge.
+## Release checklist
+
+Before publishing a release:
+
+- [ ] Run tests and Ruff on the supported Python matrix and on a clean checkout.
+- [ ] Validate JSON and SARIF output, including official SARIF schema validation and declared rule IDs.
+- [ ] Inspect source archive and wheel contents, then install the built wheel in a clean environment and smoke-test the CLI.
+- [ ] Review positive and safe-negative tests for every rule.
+- [ ] Check package metadata, changelog, version, and rule-pack version for consistency.
+- [ ] Run benchmarks on representative repositories and publish environment, workload, elapsed time, throughput, peak memory, and errors before making performance claims.
+- [ ] Inspect dependency/build artifacts and review pending dependency updates.
+- [ ] Confirm the release tag and artifact provenance before publishing.
+- [ ] Preserve the user's local changes and backups; do not merge or publish without explicit approval.
 
 ## Known limitations
 
-- Six rules only; coverage is intentionally limited.
-- AST inspection and lightweight alias tracking do not provide general taint or interprocedural data-flow analysis.
-- Static findings can be false positives and do not prove exploitability.
-- The repository scanner returns a sorted list of results, so total result memory is not yet bounded by streaming output.
-- No million-file performance claim is made.
-- No external repository, GitHub settings, profile, or published release has been changed by this archive.
+- Six rules only; this is not a complete SAST engine.
+- No general taint analysis, interprocedural data flow, or comprehensive symbol resolution.
+- No incremental cache, baseline comparison, governed suppressions, or streaming output yet.
+- Results are retained in memory; very large finding volumes may require additional resource controls.
+- Synthetic benchmarks do not demonstrate production throughput or million-file performance.
+- This independent project uses public security guidance and does not claim access to proprietary company-internal rules.
