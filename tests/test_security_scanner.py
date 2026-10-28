@@ -672,3 +672,19 @@ def test_comprehension_target_does_not_shadow_builtin_in_function() -> None:
 def test_except_target_is_local_throughout_function() -> None:
     source = "def scan():\n    eval(data)\n    try:\n        pass\n    except Exception as eval:\n        pass\n"
     assert scan_source(source) == []
+
+
+@pytest.mark.parametrize(
+    "local_import",
+    [
+        "import eval",
+        "from safe_module import eval",
+    ],
+)
+def test_local_import_binding_shadows_builtin_eval(local_import: str) -> None:
+    source = f"""
+def run():
+    eval(user_input)
+    {local_import}
+"""
+    assert scan_source(source) == []

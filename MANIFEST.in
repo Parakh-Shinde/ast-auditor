@@ -1,0 +1,10 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include SCALING_GUIDE.md
+include SECURITY_REVIEW.md
+
+recursive-include examples *.py
+recursive-include scripts *.py
+recursive-include samples *.py

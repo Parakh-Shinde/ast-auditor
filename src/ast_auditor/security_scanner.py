@@ -26,6 +26,15 @@ class _LocalBindingCollector(ast.NodeVisitor):
         if isinstance(node.ctx, (ast.Store, ast.Del)):
             self.names.add(node.id)
 
+    def visit_Import(self, node: ast.Import) -> None:
+        for item in node.names:
+            self.names.add(item.asname or item.name.split(".")[0])
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        for item in node.names:
+            if item.name != "*":
+                self.names.add(item.asname or item.name)
+
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self.names.add(node.name)
 
