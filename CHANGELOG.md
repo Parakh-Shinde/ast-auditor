@@ -2,6 +2,13 @@
 
 Notable changes to AST Auditor are recorded here. Versions follow semantic-versioning principles where practical; the rule-pack version is tracked separately from the package version.
 
+## 0.4.0 — TLS verification rule
+
+- Added PY006 for literal `verify=False` in recognized module-level `requests` and `httpx` HTTP request functions.
+- Added positive and negative regression coverage for module aliases, imported functions, function aliases, and non-matching calls.
+- Bumped the package version to `0.4.0` and rule-pack version to `2026.2`.
+- Detection is intentionally limited: client-instance methods, dynamic verification values, and custom wrappers are not resolved.
+
 ## 0.3.0 — Rule registry and maintainable project layout
 
 - Added a central registry for five security rules, including stable IDs, severity, confidence, CWE, category, remediation, and public references.
