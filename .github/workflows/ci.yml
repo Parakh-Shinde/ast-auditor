@@ -2,7 +2,7 @@ name: AST Auditor CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "upgrade/**"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -108,3 +108,90 @@ jobs:
           }
 
           echo "JSON and SARIF validation passed."
+
+      - name: Validate SARIF 2.1.0 schema
+        run: |
+          python -m pip install jsonschema
+          test -s /tmp/report.sarif
+          curl --fail --silent --show-error --location --retry 3 \
+            https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/Schemata/sarif-schema-2.1.0.json \
+            --output /tmp/sarif-schema.json
+
+          python - <<'PYTHON'
+          import json
+          from jsonschema.validators import validator_for
+
+          with open("/tmp/sarif-schema.json", encoding="utf-8") as file:
+              schema = json.load(file)
+          with open("/tmp/report.sarif", encoding="utf-8") as file:
+              report = json.load(file)
+
+          validator_type = validator_for(schema)
+          validator_type.check_schema(schema)
+          errors = sorted(
+              validator_type(schema).iter_errors(report),
+              key=lambda error: tuple(
+                  str(part) for part in error.absolute_path
+              ),
+          )
+
+          if errors:
+              for error in errors[:20]:
+                  location = "/".join(map(str, error.absolute_path)) or "<root>"
+                  print(f"SARIF schema error at {location}: {error.message}")
+              raise SystemExit(
+                  f"SARIF schema validation failed: {len(errors)} error(s)"
+              )
+
+          print("PASS: SARIF conforms to the official 2.1.0 schema")
+          PYTHON
+
+      - name: Build and inspect release distributions
+        run: |
+          python -m pip install build
+          python -m build --sdist --wheel
+
+          python - <<'PYTHON'
+          from pathlib import Path
+          import tarfile
+          import zipfile
+
+          dist = Path("dist")
+          sdists = list(dist.glob("ast_auditor-*.tar.gz"))
+          wheels = list(dist.glob("ast_auditor-*.whl"))
+
+          assert len(sdists) == 1, f"Expected one source archive, found {sdists}"
+          assert len(wheels) == 1, f"Expected one wheel, found {wheels}"
+
+          required = {
+              "MANIFEST.in",
+              "README.md",
+              "LICENSE",
+              "CHANGELOG.md",
+              "CONTRIBUTING.md",
+              "SCALING_GUIDE.md",
+              "SECURITY_REVIEW.md",
+              "examples/vulnerable_python.py",
+              "scripts/benchmark_repository_scan.py",
+              "samples/vulnerable_example.py",
+          }
+
+          with tarfile.open(sdists[0], "r:gz") as archive:
+              included = {
+                  "/".join(Path(name).parts[1:])
+                  for name in archive.getnames()
+                  if len(Path(name).parts) > 1
+              }
+
+          missing = required - included
+          assert not missing, f"Source archive missing: {sorted(missing)}"
+
+          with zipfile.ZipFile(wheels[0]) as archive:
+              wheel_files = set(archive.namelist())
+
+          assert "ast_auditor/command_line.py" in wheel_files
+          assert "ast_auditor/security_scanner.py" in wheel_files
+
+          print("PASS: source archive includes required release files")
+          print("PASS: wheel includes the CLI and scanner")
+          PYTHON
