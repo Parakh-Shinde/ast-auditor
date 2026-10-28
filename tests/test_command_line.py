@@ -34,7 +34,7 @@ def test_json_report_contains_eval_finding(tmp_path: Path) -> None:
     assert report["findings"][0]["severity"] == "HIGH"
     assert report["findings"][0]["cwe"] == "CWE-95"
     assert report["findings"][0]["confidence"] == "MEDIUM"
-    assert report["rule_pack_version"] == "2026.1"
+    assert report["rule_pack_version"] == "2026.2"
     assert report["findings"][0]["line"] == 1
 
 
