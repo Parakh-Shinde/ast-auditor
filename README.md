@@ -51,6 +51,7 @@ The registry is in `src/ast_auditor/rules.py`. Detection implementations are in 
 | PY003 | Selected `pickle` deserialization APIs | CWE-502 | HIGH | MEDIUM |
 | PY004 | Selected shell-command APIs | CWE-78 | HIGH | MEDIUM |
 | PY005 | Potentially unsafe `yaml.load()` | CWE-502 | HIGH | MEDIUM |
+| PY006 | Disabled TLS certificate verification (`verify=False`) in recognized `requests` / `httpx` calls | CWE-295 | HIGH | MEDIUM |
 
 The registry stores each rule's stable ID, title, description, severity, confidence, CWE mapping, category, remediation, references, and SARIF metadata. The rule-pack version is separate from the package version so rule changes can be tracked explicitly.
 
@@ -96,7 +97,7 @@ Benchmarks generate synthetic Python files. Record hardware, Python version, wor
 
 ## Current limitations
 
-This scanner uses AST inspection and lightweight alias tracking, not full semantic analysis or general taint tracking. It can miss reflective calls, custom wrappers, indirect data flow, complex control flow, and vulnerabilities outside the five curated rules. It does not replace dependency scanning, secret scanning, dynamic testing, code review, or a comprehensive security assessment. Repository scanning uses process workers and bounded pending work, but final results are retained in memory; very large finding volumes will need streaming output and incremental caching.
+This scanner uses AST inspection and lightweight alias tracking, not full semantic analysis or general taint tracking. It can miss reflective calls, custom wrappers, indirect data flow, complex control flow, and vulnerabilities outside the six curated rules. It currently detects literal `verify=False` only for recognized module-level `requests` and `httpx` request functions; it does not resolve client-instance methods, dynamic values, or arbitrary wrappers. It does not replace dependency scanning, secret scanning, dynamic testing, code review, or a comprehensive security assessment. Repository scanning uses process workers and bounded pending work, but final results are retained in memory; very large finding volumes will need streaming output and incremental caching.
 
 See [SCALING_GUIDE.md](SCALING_GUIDE.md), [SECURITY_REVIEW.md](SECURITY_REVIEW.md), [CONTRIBUTING.md](CONTRIBUTING.md), and [CHANGELOG.md](CHANGELOG.md).
 
