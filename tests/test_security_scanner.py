@@ -688,3 +688,35 @@ def run():
     {local_import}
 """
     assert scan_source(source) == []
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'import requests\nrequests.get(url, verify=False)\n',
+        'import requests as req\nreq.post(url, verify=False)\n',
+        'from requests import get as fetch\nfetch(url, verify=False)\n',
+        'import httpx\nhttpx.request("GET", url, verify=False)\n',
+        'from httpx import get\nget(url, verify=False)\n',
+        'import requests\nclient = requests.get\nclient(url, verify=False)\n',
+    ],
+)
+def test_detects_disabled_tls_verification(source: str) -> None:
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY006"
+    assert findings[0].severity == "HIGH"
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import requests\nrequests.get(url)\n",
+        "import requests\nrequests.get(url, verify=True)\n",
+        "import httpx\nhttpx.post(url, verify=False)\n",
+        "from unrelated import get\nget(url, verify=False)\n",
+        "import requests\nrequests.get(url, verify=not secure)\n",
+    ],
+)
+def test_does_not_flag_tls_calls_without_literal_false_or_known_api(source: str) -> None:
+    assert scan_source(source) == []
+
