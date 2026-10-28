@@ -1,6 +1,6 @@
 import pytest
 
-from ast_auditor.scanner import scan_source
+from ast_auditor.security_scanner import scan_source
 
 
 def test_detects_direct_eval() -> None:
@@ -42,9 +42,7 @@ def test_tracks_exec_alias() -> None:
 
 
 def test_tracks_chained_aliases() -> None:
-    findings = scan_source(
-        "first = eval\nsecond = first\nsecond('user_input')\n"
-    )
+    findings = scan_source("first = eval\nsecond = first\nsecond('user_input')\n")
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
     assert findings[0].line == 3
@@ -63,14 +61,12 @@ def test_reassignment_from_another_alias() -> None:
 
 
 def test_does_not_track_attribute_as_alias() -> None:
-    findings = scan_source(
-        'holder.run = eval\nholder.run("user_input")\n'
-    )
+    findings = scan_source('holder.run = eval\nholder.run("user_input")\n')
     assert findings == []
 
 
 def test_function_local_assignment_does_not_change_global_alias() -> None:
-    source = '''
+    source = """
 run = eval
 
 def example():
@@ -79,7 +75,7 @@ def example():
     run("user_input")
 
 run("module_input")
-'''
+"""
     findings = scan_source(source)
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
@@ -87,7 +83,7 @@ run("module_input")
 
 
 def test_nested_function_does_not_change_outer_alias() -> None:
-    source = '''
+    source = """
 def outer():
     run = eval
 
@@ -96,7 +92,7 @@ def outer():
         run("Hello")
 
     run("user_input")
-'''
+"""
     findings = scan_source(source)
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
@@ -104,7 +100,7 @@ def outer():
 
 
 def test_uninvoked_global_function_does_not_change_module_alias() -> None:
-    source = '''
+    source = """
 run = eval
 
 def example():
@@ -112,7 +108,7 @@ def example():
     run = print
 
 run("Hello")
-'''
+"""
     findings = scan_source(source)
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
@@ -120,7 +116,7 @@ run("Hello")
 
 
 def test_nonlocal_assignment_does_not_leak_into_outer_scope() -> None:
-    source = '''
+    source = """
 def outer():
     run = eval
 
@@ -130,7 +126,7 @@ def outer():
 
     inner()
     run("Hello")
-'''
+"""
     findings = scan_source(source)
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
@@ -138,7 +134,7 @@ def outer():
 
 
 def test_uninvoked_nonlocal_function_does_not_change_outer_alias() -> None:
-    source = '''
+    source = """
 def outer():
     run = eval
 
@@ -147,7 +143,7 @@ def outer():
         run = print
 
     run("user_input")
-'''
+"""
     findings = scan_source(source)
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
@@ -155,13 +151,13 @@ def outer():
 
 
 def test_function_body_does_not_leak_alias_to_module() -> None:
-    source = '''
+    source = """
 def example():
     run = eval
     run("user_input")
 
 print("safe")
-'''
+"""
     findings = scan_source(source)
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
@@ -169,13 +165,13 @@ print("safe")
 
 
 def test_class_body_does_not_leak_alias_to_module() -> None:
-    source = '''
+    source = """
 class Example:
     run = eval
     run("user_input")
 
 print("safe")
-'''
+"""
     findings = scan_source(source)
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
@@ -183,11 +179,11 @@ print("safe")
 
 
 def test_lambda_body_does_not_leak_alias_changes() -> None:
-    source = '''
+    source = """
 run = eval
 callback = lambda: (run := print)
 run("user_input")
-'''
+"""
     findings = scan_source(source)
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
@@ -254,9 +250,8 @@ run("user_input")
     assert findings[0].line == 4
 
 
-
 def test_method_does_not_resolve_names_from_class_namespace() -> None:
-    source = '''
+    source = """
 run = eval
 
 class Example:
@@ -264,7 +259,7 @@ class Example:
 
     def check(self):
         run("user-controlled input")
-'''
+"""
     findings = scan_source(source)
 
     assert len(findings) == 1
@@ -273,7 +268,7 @@ class Example:
 
 
 def test_method_resolves_alias_from_enclosing_function() -> None:
-    source = '''
+    source = """
 def outer():
     run = eval
 
@@ -282,7 +277,7 @@ def outer():
 
         def check(self):
             run("user-controlled input")
-'''
+"""
     findings = scan_source(source)
 
     assert len(findings) == 1
@@ -290,16 +285,15 @@ def outer():
     assert findings[0].line == 9
 
 
-
 def test_nested_function_in_method_resolves_method_local_alias() -> None:
-    source = '''
+    source = """
 class Example:
     def check(self):
         run = eval
 
         def inner():
             run("user-controlled input")
-'''
+"""
     findings = scan_source(source)
 
     assert len(findings) == 1
@@ -308,7 +302,7 @@ class Example:
 
 
 def test_nested_class_in_method_resolves_method_local_alias() -> None:
-    source = '''
+    source = """
 class Example:
     def check(self):
         run = eval
@@ -316,13 +310,12 @@ class Example:
         class Nested:
             def inner(self):
                 run("user-controlled input")
-'''
+"""
     findings = scan_source(source)
 
     assert len(findings) == 1
     assert findings[0].rule_id == "PY001"
     assert findings[0].line == 8
-
 
 
 def test_destructuring_assignment_invalidates_stale_alias() -> None:
@@ -414,7 +407,6 @@ loads(data)
 object.load()
 """
     assert scan_source(source) == []
-
 
 
 def test_detects_subprocess_run_with_shell_true() -> None:
@@ -602,3 +594,81 @@ yaml.load(data, Loader=safe_loader)
     findings = scan_source(source)
     assert len(findings) == 1
     assert findings[0].rule_id == "PY005"
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "for eval in functions:\n    eval(data)\n",
+        "with manager as eval:\n    eval(data)\n",
+        "try:\n    pass\nexcept Exception as eval:\n    eval(data)\n",
+        "values = [eval(item) for eval in functions]\n",
+    ],
+)
+def test_does_not_flag_eval_when_shadowed_by_local_binding(source: str) -> None:
+    assert scan_source(source) == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import os\nos.popen(command)\n",
+        "import subprocess\nsubprocess.getoutput(command)\n",
+        "import subprocess\nsubprocess.getstatusoutput(command)\n",
+    ],
+)
+def test_detects_additional_shell_execution_apis(source: str) -> None:
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY004"
+
+
+def test_detects_pickle_unpickler_load() -> None:
+    findings = scan_source("import pickle\npickle.Unpickler(stream).load()\n")
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY003"
+
+
+def test_detects_getattr_for_builtins_eval() -> None:
+    findings = scan_source("import builtins\ngetattr(builtins, 'eval')(data)\n")
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+
+
+def test_detects_branch_dependent_dangerous_alias() -> None:
+    source = (
+        "if condition:\n    runner = eval\nelse:\n    runner = print\nrunner(data)\n"
+    )
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+
+
+def test_detects_pickle_in_lambda_default_expression() -> None:
+    findings = scan_source("import pickle\nhandler = lambda x=pickle.loads(data): x\n")
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY003"
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from yaml import load, SafeLoader\nload(data, Loader=SafeLoader)\n",
+        "from yaml import load, SafeLoader\nload(data, SafeLoader)\n",
+        "import yaml\nyaml.load(data, yaml.SafeLoader)\n",
+    ],
+)
+def test_does_not_flag_safe_yaml_loader_forms(source: str) -> None:
+    assert scan_source(source) == []
+
+
+def test_comprehension_target_does_not_shadow_builtin_in_function() -> None:
+    source = "def scan(items):\n    values = [item for eval in items]\n    eval(data)\n"
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+
+
+def test_except_target_is_local_throughout_function() -> None:
+    source = "def scan():\n    eval(data)\n    try:\n        pass\n    except Exception as eval:\n        pass\n"
+    assert scan_source(source) == []

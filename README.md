@@ -1,88 +1,105 @@
 # AST Auditor
 
-**AST Auditor** is a lightweight, AST-based static security scanner for Python. It inspects source code without executing the scanned program and reports selected potentially dangerous function calls.
+**AST Auditor** is an independent Python static application security testing (SAST) project. It parses source code without executing the scanned program and reports a curated set of potentially dangerous patterns.
 
-The project demonstrates Python security analysis, lightweight alias tracking, command-line tooling, automated testing, and CI validation.
+This project is designed as a credible, testable foundation for security-engineering work: a central rule registry, stable rule IDs, regression tests, JSON/SARIF output, and bounded parallel repository scanning. It does **not** claim to use proprietary Google, Meta, or other company-internal rules, and it has not yet demonstrated million-file production performance.
 
-## Features
+## Quick start
 
-- Detects direct calls to `eval()` with rule PY001.
-- Detects direct calls to `exec()` with rule PY002.
-- Detects calls to `pickle.load()` and `pickle.loads()` with rule PY003, including common import aliases.
-- Detects `subprocess` calls with literal `shell=True` and `os.system()` with rule PY004, including common import aliases.
-- Detects potentially unsafe `yaml.load()` calls with rule PY005, including supported import and alias patterns.
-- Tracks simple and chained aliases in supported cases.
-- Reports severity and source line numbers.
-- Supports text, JSON, and SARIF 2.1.0 output.
-- Includes automated scanner and CLI tests.
+Requires Python 3.10 or newer.
 
-## Detection rules
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+python -m pytest -q
+python -m ruff check src tests scripts
+```
 
-| Rule | Detection | Severity |
-|---|---|---|
-| PY001 | Potentially dangerous `eval()` calls | HIGH |
-| PY002 | Potentially dangerous `exec()` calls | HIGH |
-| PY003 | Selected `pickle.load()` and `pickle.loads()` calls | HIGH |
-| PY004 | Selected `subprocess` calls with literal `shell=True`, and `os.system()` | HIGH |
-| PY005 | Potentially unsafe `yaml.load()` calls when a recognized safe loader cannot be established | HIGH |
+## Scan code
 
-These rules identify potentially dangerous code patterns. A finding is not proof that a vulnerability is exploitable.
+```bash
+# Show the scanner version and rule-pack version
+ast-auditor --version
 
-## Requirements
+# Print all rule metadata as JSON
+ast-auditor --list-rules
 
-- Python 3.10 or newer.
-- pip.
+# Scan one Python file
+ast-auditor examples/vulnerable_python.py
 
-## Installation
+# Scan a repository; output machine-readable JSON
+ast-auditor . --jobs 4 --format json
 
-From the repository root, install the project and its development dependencies:
+# Generate SARIF 2.1.0 for CI/code-scanning integrations
+ast-auditor . --jobs 4 --format sarif > security-findings.sarif
 
-    python -m pip install -e ".[dev]"
+# Exclude generated code and cap individual file size
+ast-auditor . --exclude '**/generated/**' --max-file-bytes 2000000
+```
 
-## Usage
+A scan with findings returns exit code `1`. A file read or syntax error returns `2`. A clean scan returns `0`.
 
-Show CLI options:
+## Curated rules
 
-    ast-auditor --help
+The registry is in `src/ast_auditor/rules.py`. Detection implementations are in `src/ast_auditor/security_scanner.py`.
 
-Scan a file:
+| Rule | Risk | CWE | Severity | Confidence |
+|---|---|---|---|---|
+| PY001 | Dynamic `eval()` | CWE-95 | HIGH | MEDIUM |
+| PY002 | Dynamic `exec()` | CWE-94 | HIGH | MEDIUM |
+| PY003 | Selected `pickle` deserialization APIs | CWE-502 | HIGH | MEDIUM |
+| PY004 | Selected shell-command APIs | CWE-78 | HIGH | MEDIUM |
+| PY005 | Potentially unsafe `yaml.load()` | CWE-502 | HIGH | MEDIUM |
 
-    ast-auditor samples/vulnerable_example.py
+The registry stores each rule's stable ID, title, description, severity, confidence, CWE mapping, category, remediation, references, and SARIF metadata. The rule-pack version is separate from the package version so rule changes can be tracked explicitly.
 
-Generate JSON:
+## Project map
 
-    ast-auditor samples/vulnerable_example.py --format json
+| Path | Purpose |
+|---|---|
+| `src/ast_auditor/security_scanner.py` | AST visitor and detection logic |
+| `src/ast_auditor/rules.py` | Versioned rule metadata and registry |
+| `src/ast_auditor/repository_scanner.py` | Safe file discovery and bounded parallel scanning |
+| `src/ast_auditor/command_line.py` | CLI, JSON output, and SARIF generation |
+| `src/ast_auditor/__main__.py` | Standard `python -m ast_auditor` entry point |
+| `tests/test_security_scanner.py` | Rule behavior and false-positive regression tests |
+| `tests/test_command_line.py` | CLI, JSON, SARIF, and repository scan tests |
+| `examples/vulnerable_python.py` | Intentionally vulnerable scanner fixture; never use as application code |
+| `examples/alias_tracking_demo.py` | Demonstration of supported alias cases |
+| `scripts/benchmark_repository_scan.py` | Synthetic local throughput benchmark |
+| `SCALING_GUIDE.md` | Scale limitations and next-stage roadmap |
+| `SECURITY_REVIEW.md` | Review notes and known limitations |
+| `CONTRIBUTING.md` | How to add rules and run quality checks |
+| `CHANGELOG.md` | Version history |
 
-Generate SARIF:
+Files such as `pyproject.toml`, `LICENSE`, `.gitignore`, `.github/workflows/ci.yml`, `__init__.py`, and `__main__.py` retain conventional names because Python and GitHub tooling expect or commonly use them.
 
-    ast-auditor samples/vulnerable_example.py --format sarif
+## Validate and benchmark
 
-You can also run the module directly:
+```bash
+python -m pytest -q
+python -m ruff check src tests scripts
+python -m compileall -q src scripts
+python scripts/benchmark_repository_scan.py --files 10000 --jobs 4
+```
 
-    python -m ast_auditor samples/vulnerable_example.py
+Benchmarks generate synthetic Python files. Record hardware, Python version, worker count, source size, elapsed time, peak memory, and findings before comparing runs. A synthetic benchmark is not evidence of production throughput or a million-file SLO.
 
-## Exit codes
+## Engineering principles
 
-- 0: No findings.
-- 1: One or more findings detected.
-- 2: File read or Python parsing error.
+- Add a rule only with positive examples, safe/negative examples, regression tests, rationale, and known limitations.
+- Prefer conservative claims. A static finding is a lead for investigation, not proof of exploitability.
+- Do not execute scanned source code.
+- Do not claim precision/recall or enterprise scale without a representative, reproducible benchmark corpus.
+- Use public security guidance and independently written detection logic; do not imply access to proprietary company rules.
 
-## Tests and lint
+## Current limitations
 
-Run tests:
+This scanner uses AST inspection and lightweight alias tracking, not full semantic analysis or general taint tracking. It can miss reflective calls, custom wrappers, indirect data flow, complex control flow, and vulnerabilities outside the five curated rules. It does not replace dependency scanning, secret scanning, dynamic testing, code review, or a comprehensive security assessment. Repository scanning uses process workers and bounded pending work, but final results are retained in memory; very large finding volumes will need streaming output and incremental caching.
 
-    python -m pytest
-
-Run lint:
-
-    ruff check src tests
-
-## Limitations
-
-The scanner detects potentially dangerous calls using AST inspection and lightweight alias tracking. Alias tracking does not perform complete Python scope, control-flow, or data-flow analysis. It may miss indirect calls, dynamically resolved functions, and other classes of Python security vulnerabilities. PY003 targets the standard-library `pickle` API and does not cover every unsafe deserialization library or custom wrapper. PY004 detects selected standard-library subprocess APIs when `shell=True` is explicitly written as a literal, plus `os.system()`; it does not perform taint analysis and may miss indirect or dynamically configured shell execution. PY005 flags `yaml.load()` when the scanner cannot establish that a recognized safe loader is used. It is not a complete YAML security analysis and may not recognize every custom or indirect loader configuration. Findings are potential risks, not proof of exploitability.
-
-A finding indicates potentially dangerous code, not proof of exploitability. This early-stage tool is not a substitute for a comprehensive security audit.
+See [SCALING_GUIDE.md](SCALING_GUIDE.md), [SECURITY_REVIEW.md](SECURITY_REVIEW.md), [CONTRIBUTING.md](CONTRIBUTING.md), and [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
