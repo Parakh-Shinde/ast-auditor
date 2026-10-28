@@ -712,7 +712,7 @@ def test_detects_disabled_tls_verification(source: str) -> None:
     [
         "import requests\nrequests.get(url)\n",
         "import requests\nrequests.get(url, verify=True)\n",
-        "import httpx\nhttpx.post(url, verify=False)\n",
+        "import other\nother.post(url, verify=False)\n",
         "from unrelated import get\nget(url, verify=False)\n",
         "import requests\nrequests.get(url, verify=not secure)\n",
     ],
