@@ -2,7 +2,7 @@ import ast
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ast_auditor.rules import PY001, PY002, PY003, PY004, PY005
+from ast_auditor.rules import PY001, PY002, PY003, PY004, PY005, PY006
 
 
 @dataclass(frozen=True)
@@ -101,6 +101,9 @@ class SecurityVisitor(ast.NodeVisitor):
         "getstatusoutput",
     }
     YAML_SAFE_LOADERS: ClassVar[set[str]] = {"SafeLoader", "CSafeLoader"}
+    HTTP_REQUEST_FUNCTIONS: ClassVar[set[str]] = {
+        "request", "get", "options", "head", "post", "put", "patch", "delete"
+    }
 
     def __init__(self) -> None:
         self.findings: list[Finding] = []
@@ -154,6 +157,11 @@ class SecurityVisitor(ast.NodeVisitor):
                 if module_binding == "yaml_module" and value.attr == "load":
                     return "yaml.load"
                 if (
+                    module_binding in {"requests_module", "httpx_module"}
+                    and value.attr in self.HTTP_REQUEST_FUNCTIONS
+                ):
+                    return "tls.verify_false"
+                if (
                     module_binding == "yaml_module"
                     and value.attr in self.YAML_SAFE_LOADERS
                 ):
@@ -184,6 +192,7 @@ class SecurityVisitor(ast.NodeVisitor):
             "pickle.loads",
             "pickle.Unpickler.load",
             "yaml.load",
+            "tls.verify_false",
             "os.system",
             "os.popen",
         }
@@ -280,6 +289,10 @@ class SecurityVisitor(ast.NodeVisitor):
                 self.bindings[bound_name] = "pickle_module"
             elif item.name == "yaml":
                 self.bindings[bound_name] = "yaml_module"
+            elif item.name == "requests":
+                self.bindings[bound_name] = "requests_module"
+            elif item.name == "httpx":
+                self.bindings[bound_name] = "httpx_module"
             elif item.name == "subprocess":
                 self.bindings[bound_name] = "subprocess_module"
             elif item.name == "os":
@@ -306,6 +319,12 @@ class SecurityVisitor(ast.NodeVisitor):
                 self.bindings[bound_name] = f"pickle.{item.name}"
             elif node.level == 0 and node.module == "yaml" and item.name == "load":
                 self.bindings[bound_name] = "yaml.load"
+            elif (
+                node.level == 0
+                and node.module in {"requests", "httpx"}
+                and item.name in self.HTTP_REQUEST_FUNCTIONS
+            ):
+                self.bindings[bound_name] = "tls.verify_false"
             elif (
                 node.level == 0
                 and node.module == "yaml"
@@ -584,6 +603,25 @@ class SecurityVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> None:
         dangerous_name = self._resolve_expression(node.func)
+
+        tls_verification_disabled = any(
+            keyword.arg == "verify"
+            and isinstance(keyword.value, ast.Constant)
+            and keyword.value.value is False
+            for keyword in node.keywords
+        )
+        if dangerous_name == "tls.verify_false" and tls_verification_disabled:
+            self.findings.append(
+                Finding(
+                    rule_id=PY006,
+                    message=(
+                        "TLS certificate verification is disabled with verify=False; "
+                        "the client may accept an impersonated server certificate"
+                    ),
+                    line=node.lineno,
+                    severity="HIGH",
+                )
+            )
 
         shell_enabled = any(
             keyword.arg == "shell"

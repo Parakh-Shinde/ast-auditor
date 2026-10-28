@@ -34,7 +34,7 @@ def test_json_report_contains_eval_finding(tmp_path: Path) -> None:
     assert report["findings"][0]["severity"] == "HIGH"
     assert report["findings"][0]["cwe"] == "CWE-95"
     assert report["findings"][0]["confidence"] == "MEDIUM"
-    assert report["rule_pack_version"] == "2026.1"
+    assert report["rule_pack_version"] == "2026.2"
     assert report["findings"][0]["line"] == 1
 
 
@@ -88,7 +88,7 @@ def test_sarif_report_contains_eval_finding(tmp_path):
 
     driver = report["runs"][0]["tool"]["driver"]
     assert driver["name"] == "AST Auditor"
-    assert driver["version"] == "0.3.0"
+    assert driver["version"] == "0.4.0"
 
     rule_ids = {rule["id"] for rule in driver["rules"]}
     assert {"PY001", "PY002"}.issubset(rule_ids)
@@ -131,12 +131,14 @@ def test_sarif_declares_every_rule_used_by_findings(tmp_path: Path) -> None:
 import pickle
 import subprocess
 import yaml
+import requests
 
 eval(user_input)
 exec(user_input)
 pickle.loads(data)
 subprocess.run(command, shell=True)
 yaml.load(data)
+requests.get(url, verify=False)
 """,
         encoding="utf-8",
     )
@@ -150,7 +152,7 @@ yaml.load(data)
     declared_rule_ids = {rule["id"] for rule in driver["rules"]}
     result_rule_ids = {finding["ruleId"] for finding in report["runs"][0]["results"]}
 
-    assert {"PY001", "PY002", "PY003", "PY004", "PY005"} <= result_rule_ids
+    assert {"PY001", "PY002", "PY003", "PY004", "PY005", "PY006"} <= result_rule_ids
     assert result_rule_ids <= declared_rule_ids
 
 

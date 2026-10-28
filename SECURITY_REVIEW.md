@@ -4,6 +4,11 @@
 
 This document describes the supplied project archive and the v0.3.0 changes. It is not a third-party certification, a complete security audit, or evidence that the scanner is equivalent to any company's internal tooling.
 
+## v0.4.0 engineering changes
+
+- Added PY006 for literal `verify=False` in recognized module-level `requests` and `httpx` request functions.
+- Added positive and negative regression tests; bumped package version to `0.4.0` and rule pack to `2026.2`.
+
 ## v0.3.0 engineering changes
 
 - Added `rules.py` as a central registry with rule-pack version, stable IDs, severity, confidence, CWE, category, remediation, references, and SARIF metadata.
@@ -24,7 +29,7 @@ This document describes the supplied project archive and the v0.3.0 changes. It 
 
 ## Known limitations
 
-- Five rules only; coverage is intentionally limited.
+- Six rules only; coverage is intentionally limited.
 - AST inspection and lightweight alias tracking do not provide general taint or interprocedural data-flow analysis.
 - Static findings can be false positives and do not prove exploitability.
 - The repository scanner returns a sorted list of results, so total result memory is not yet bounded by streaming output.
