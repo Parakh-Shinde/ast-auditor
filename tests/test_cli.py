@@ -63,11 +63,12 @@ def test_missing_file_returns_two(tmp_path: Path) -> None:
     assert result.returncode == 2
     assert "cannot read" in result.stderr
 
+
 def test_sarif_report_contains_eval_finding(tmp_path):
     source_file = tmp_path / "vulnerable.py"
     source_file.write_text(
         "result = eval(user_input)\n",
-      encoding="utf-8",
+        encoding="utf-8",
     )
 
     result = run_cli(
@@ -85,8 +86,8 @@ def test_sarif_report_contains_eval_finding(tmp_path):
     driver = report["runs"][0]["tool"]["driver"]
     assert driver["name"] == "AST Auditor"
 
-    rule_ids =  {rule["id"] for rule in driver["rules"]}
-    assert {"PY001","PY002"}.issubset(rule_ids)
+    rule_ids = {rule["id"] for rule in driver["rules"]}
+    assert {"PY001", "PY002"}.issubset(rule_ids)
 
     finding = report["runs"][0]["results"][0]
     assert finding["ruleId"] == "PY001"
@@ -96,6 +97,7 @@ def test_sarif_report_contains_eval_finding(tmp_path):
     location = finding["locations"][0]["physicalLocation"]
     assert location["region"]["startLine"] == 1
     assert location["artifactLocation"]["uri"] == str(source_file)
+
 
 def test_sarif_report_for_clean_file_has_no_findings(tmp_path):
     source_file = tmp_path / "clean.py"
@@ -142,9 +144,7 @@ yaml.load(data)
     driver = report["runs"][0]["tool"]["driver"]
 
     declared_rule_ids = {rule["id"] for rule in driver["rules"]}
-    result_rule_ids = {
-        finding["ruleId"] for finding in report["runs"][0]["results"]
-    }
+    result_rule_ids = {finding["ruleId"] for finding in report["runs"][0]["results"]}
 
     assert {"PY001", "PY002", "PY003", "PY004", "PY005"} <= result_rule_ids
     assert result_rule_ids <= declared_rule_ids

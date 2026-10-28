@@ -34,17 +34,20 @@ jobs:
         run: python -m pip install -e ".[dev]"
 
       - name: Run Ruff
-        run: python -m ruff check src tests
+        run: python -m ruff check src tests scripts
 
       - name: Run tests
         run: python -m pytest -q
 
+      - name: Validate rule registry output
+        run: python -m ast_auditor --list-rules > /tmp/rules.json && python -m json.tool /tmp/rules.json > /dev/null
+
       - name: Validate JSON and SARIF output
         run: |
           set +e
-          python -m ast_auditor --format json samples/vulnerable_example.py > /tmp/report.json
+          python -m ast_auditor --format json examples/vulnerable_python.py > /tmp/report.json
           json_status=$?
-          python -m ast_auditor --format sarif samples/vulnerable_example.py > /tmp/report.sarif
+          python -m ast_auditor --format sarif examples/vulnerable_python.py > /tmp/report.sarif
           sarif_status=$?
           set -e
 

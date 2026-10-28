@@ -8,6 +8,7 @@ exec("print('hello')")
 
 # Expected: PY001 — alias imported from builtins
 from builtins import eval as evaluate
+
 evaluate("2 + 2")
 
 # Expected: PY001 — qualified builtins call
