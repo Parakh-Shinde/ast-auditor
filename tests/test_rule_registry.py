@@ -72,5 +72,5 @@ def test_cli_version_includes_package_and_rule_pack_versions() -> None:
         check=False,
     )
     assert result.returncode == 0
-    assert "0.3.0" in result.stdout
+    assert "0.4.0" in result.stdout
     assert RULE_PACK_VERSION in result.stdout
