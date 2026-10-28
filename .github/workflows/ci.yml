@@ -114,7 +114,7 @@ jobs:
           python -m pip install jsonschema
           test -s /tmp/report.sarif
           curl --fail --silent --show-error --location --retry 3 \
-            https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/Schemata/sarif-schema-2.1.0.json \
+            https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json \
             --output /tmp/sarif-schema.json
 
           python - <<'PYTHON'
