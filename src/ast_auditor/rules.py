@@ -11,12 +11,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
-RULE_PACK_VERSION = "2026.1"
+RULE_PACK_VERSION = "2026.2"
 PY001 = "PY001"
 PY002 = "PY002"
 PY003 = "PY003"
 PY004 = "PY004"
 PY005 = "PY005"
+PY006 = "PY006"
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,6 +113,23 @@ _RULES = {
         references=(
             "https://cwe.mitre.org/data/definitions/502.html",
             "https://pyyaml.org/wiki/PyYAMLDocumentation",
+        ),
+        security_score="7.5",
+    ),
+    "PY006": RuleDefinition(
+        rule_id="PY006",
+        name="DisabledTlsVerification",
+        title="TLS certificate verification disabled in HTTP request",
+        description="Disabling certificate verification in recognized requests or httpx module-level request calls permits server impersonation and weakens transport security.",
+        severity="HIGH",
+        confidence="MEDIUM",
+        cwe="CWE-295",
+        category="improper-certificate-validation",
+        remediation="Remove verify=False and use the platform trust store or an explicitly configured trusted CA bundle. Do not disable verification to work around certificate errors.",
+        references=(
+            "https://cwe.mitre.org/data/definitions/295.html",
+            "https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification",
+            "https://www.python-httpx.org/advanced/ssl/",
         ),
         security_score="7.5",
     ),
