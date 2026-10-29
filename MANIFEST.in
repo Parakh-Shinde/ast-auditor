@@ -8,3 +8,5 @@ include SECURITY_REVIEW.md
 recursive-include examples *.py
 recursive-include scripts *.py
 recursive-include samples *.py
+
+recursive-include evaluation *.json *.jsonl
