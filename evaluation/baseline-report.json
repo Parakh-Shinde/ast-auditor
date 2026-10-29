@@ -1,0 +1,610 @@
+{
+  "case_results": [
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY001"
+      ],
+      "id": "PY001-01",
+      "predicted_rules": [
+        "PY001"
+      ],
+      "rationale": "Direct builtin eval call",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY001"
+      ],
+      "id": "PY001-02",
+      "predicted_rules": [
+        "PY001"
+      ],
+      "rationale": "Imported eval alias",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY001-N01",
+      "predicted_rules": [],
+      "rationale": "Literal-only parsing API",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY001-N02",
+      "predicted_rules": [],
+      "rationale": "Parameter shadows builtin name",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY002"
+      ],
+      "id": "PY002-01",
+      "predicted_rules": [
+        "PY002"
+      ],
+      "rationale": "Direct builtin exec call",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY002"
+      ],
+      "id": "PY002-02",
+      "predicted_rules": [
+        "PY002"
+      ],
+      "rationale": "Imported exec alias",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY002-N01",
+      "predicted_rules": [],
+      "rationale": "Unrelated object method",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY002-N02",
+      "predicted_rules": [],
+      "rationale": "Local function shadows builtin name",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY003"
+      ],
+      "id": "PY003-01",
+      "predicted_rules": [
+        "PY003"
+      ],
+      "rationale": "pickle.loads deserialization",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY003"
+      ],
+      "id": "PY003-02",
+      "predicted_rules": [
+        "PY003"
+      ],
+      "rationale": "Imported pickle.load alias",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY003-N01",
+      "predicted_rules": [],
+      "rationale": "JSON deserialization",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY003-N02",
+      "predicted_rules": [],
+      "rationale": "Serialization rather than deserialization",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY004"
+      ],
+      "id": "PY004-01",
+      "predicted_rules": [
+        "PY004"
+      ],
+      "rationale": "subprocess with shell enabled",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY004"
+      ],
+      "id": "PY004-02",
+      "predicted_rules": [
+        "PY004"
+      ],
+      "rationale": "os.system shell execution",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY004-N01",
+      "predicted_rules": [],
+      "rationale": "Argument-list execution with shell disabled",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY004-N02",
+      "predicted_rules": [],
+      "rationale": "Unrelated run method",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY005"
+      ],
+      "id": "PY005-01",
+      "predicted_rules": [
+        "PY005"
+      ],
+      "rationale": "yaml.load without explicit safe loader",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY005"
+      ],
+      "id": "PY005-02",
+      "predicted_rules": [
+        "PY005"
+      ],
+      "rationale": "Imported yaml.load alias",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY005-N01",
+      "predicted_rules": [],
+      "rationale": "PyYAML safe_load",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY005-N02",
+      "predicted_rules": [],
+      "rationale": "Unrelated load method",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY006"
+      ],
+      "id": "PY006-01",
+      "predicted_rules": [
+        "PY006"
+      ],
+      "rationale": "requests disables TLS verification",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY006"
+      ],
+      "id": "PY006-02",
+      "predicted_rules": [
+        "PY006"
+      ],
+      "rationale": "httpx disables TLS verification",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY006-N01",
+      "predicted_rules": [],
+      "rationale": "TLS verification explicitly enabled",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY006-N02",
+      "predicted_rules": [],
+      "rationale": "Default TLS verification",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY001"
+      ],
+      "id": "PY001-03",
+      "predicted_rules": [
+        "PY001"
+      ],
+      "rationale": "Qualified builtin eval",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY001"
+      ],
+      "id": "PY001-04",
+      "predicted_rules": [
+        "PY001"
+      ],
+      "rationale": "Dynamic lookup of builtin eval",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY001-N03",
+      "predicted_rules": [],
+      "rationale": "Unrelated object's eval method",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY001-N04",
+      "predicted_rules": [],
+      "rationale": "Function parameter shadows eval",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY002"
+      ],
+      "id": "PY002-03",
+      "predicted_rules": [
+        "PY002"
+      ],
+      "rationale": "Qualified builtin exec",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY002"
+      ],
+      "id": "PY002-04",
+      "predicted_rules": [
+        "PY002"
+      ],
+      "rationale": "Dynamic lookup of builtin exec",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY002-N03",
+      "predicted_rules": [],
+      "rationale": "Unrelated object's exec method",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY002-N04",
+      "predicted_rules": [],
+      "rationale": "Function parameter shadows exec",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY003"
+      ],
+      "id": "PY003-03",
+      "predicted_rules": [
+        "PY003"
+      ],
+      "rationale": "Unpickler.load deserialization",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY003"
+      ],
+      "id": "PY003-04",
+      "predicted_rules": [
+        "PY003"
+      ],
+      "rationale": "Aliased pickle module",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY003-N03",
+      "predicted_rules": [],
+      "rationale": "Pickle serialization",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY003-N04",
+      "predicted_rules": [],
+      "rationale": "Unrelated object's loads method",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY004"
+      ],
+      "id": "PY004-03",
+      "predicted_rules": [
+        "PY004"
+      ],
+      "rationale": "os.popen shell execution",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY004"
+      ],
+      "id": "PY004-04",
+      "predicted_rules": [
+        "PY004"
+      ],
+      "rationale": "Popen with shell enabled",
+      "unsupported_rules": []
+    },
+    {
+      "correct": null,
+      "evaluation_status": "unsupported_pattern",
+      "expected_rules": [],
+      "id": "PY004-N03",
+      "predicted_rules": [],
+      "rationale": "Shell flag is dynamic rather than literal True",
+      "unsupported_rules": [
+        "PY004"
+      ]
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY004-N04",
+      "predicted_rules": [],
+      "rationale": "Unrelated run method",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY005"
+      ],
+      "id": "PY005-03",
+      "predicted_rules": [
+        "PY005"
+      ],
+      "rationale": "Explicit unsafe YAML loader",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY005"
+      ],
+      "id": "PY005-04",
+      "predicted_rules": [
+        "PY005"
+      ],
+      "rationale": "Unverified custom YAML loader",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY005-N03",
+      "predicted_rules": [],
+      "rationale": "Explicit C safe YAML loader",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY005-N04",
+      "predicted_rules": [],
+      "rationale": "Safe YAML API",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY006"
+      ],
+      "id": "PY006-03",
+      "predicted_rules": [
+        "PY006"
+      ],
+      "rationale": "Aliased requests module disables TLS verification",
+      "unsupported_rules": []
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [
+        "PY006"
+      ],
+      "id": "PY006-04",
+      "predicted_rules": [
+        "PY006"
+      ],
+      "rationale": "httpx GET disables TLS verification",
+      "unsupported_rules": []
+    },
+    {
+      "correct": null,
+      "evaluation_status": "unsupported_pattern",
+      "expected_rules": [],
+      "id": "PY006-N03",
+      "predicted_rules": [],
+      "rationale": "Dynamic TLS verification setting",
+      "unsupported_rules": [
+        "PY006"
+      ]
+    },
+    {
+      "correct": true,
+      "evaluation_status": "labelled",
+      "expected_rules": [],
+      "id": "PY006-N04",
+      "predicted_rules": [],
+      "rationale": "Unrecognized client API",
+      "unsupported_rules": []
+    }
+  ],
+  "cases_exactly_matched": 46,
+  "cases_with_mismatches": 0,
+  "caveat": "Exploratory, manually labelled corpus only; these metrics do not represent universal scanner accuracy or production performance.",
+  "corpus_cases": 48,
+  "expected_rule_labels": 24,
+  "micro_average": {
+    "f1": 1.0,
+    "fn": 0,
+    "fp": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "tn": 262,
+    "tp": 24
+  },
+  "mismatches": [],
+  "per_rule": {
+    "PY001": {
+      "f1": 1.0,
+      "fn": 0,
+      "fp": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "tn": 44,
+      "tp": 4
+    },
+    "PY002": {
+      "f1": 1.0,
+      "fn": 0,
+      "fp": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "tn": 44,
+      "tp": 4
+    },
+    "PY003": {
+      "f1": 1.0,
+      "fn": 0,
+      "fp": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "tn": 44,
+      "tp": 4
+    },
+    "PY004": {
+      "f1": 1.0,
+      "fn": 0,
+      "fp": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "tn": 43,
+      "tp": 4
+    },
+    "PY005": {
+      "f1": 1.0,
+      "fn": 0,
+      "fp": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "tn": 44,
+      "tp": 4
+    },
+    "PY006": {
+      "f1": 1.0,
+      "fn": 0,
+      "fp": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "tn": 43,
+      "tp": 4
+    }
+  },
+  "predicted_rule_labels": 24,
+  "rules_evaluated": 6,
+  "unsupported_cases": 2
+}

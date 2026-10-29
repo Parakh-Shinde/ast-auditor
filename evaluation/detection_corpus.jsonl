@@ -1,0 +1,48 @@
+{"id": "PY001-01", "source": "result = eval(user_input)\n", "expected_rules": ["PY001"], "rationale": "Direct builtin eval call"}
+{"id": "PY001-02", "source": "from builtins import eval as dynamic_eval\nresult = dynamic_eval(expression)\n", "expected_rules": ["PY001"], "rationale": "Imported eval alias"}
+{"id": "PY001-N01", "source": "import ast\nresult = ast.literal_eval(user_input)\n", "expected_rules": [], "rationale": "Literal-only parsing API"}
+{"id": "PY001-N02", "source": "def calculate(eval, value):\n    return eval(value)\n", "expected_rules": [], "rationale": "Parameter shadows builtin name"}
+{"id": "PY002-01", "source": "exec(untrusted_source)\n", "expected_rules": ["PY002"], "rationale": "Direct builtin exec call"}
+{"id": "PY002-02", "source": "from builtins import exec as run_code\nrun_code(source_text)\n", "expected_rules": ["PY002"], "rationale": "Imported exec alias"}
+{"id": "PY002-N01", "source": "executor.execute(source_text)\n", "expected_rules": [], "rationale": "Unrelated object method"}
+{"id": "PY002-N02", "source": "def exec(source):\n    return source.strip()\nexec(user_input)\n", "expected_rules": [], "rationale": "Local function shadows builtin name"}
+{"id": "PY003-01", "source": "import pickle\nvalue = pickle.loads(payload)\n", "expected_rules": ["PY003"], "rationale": "pickle.loads deserialization"}
+{"id": "PY003-02", "source": "from pickle import load as decode\nvalue = decode(stream)\n", "expected_rules": ["PY003"], "rationale": "Imported pickle.load alias"}
+{"id": "PY003-N01", "source": "import json\nvalue = json.loads(payload)\n", "expected_rules": [], "rationale": "JSON deserialization"}
+{"id": "PY003-N02", "source": "import pickle\npayload = pickle.dumps(value)\n", "expected_rules": [], "rationale": "Serialization rather than deserialization"}
+{"id": "PY004-01", "source": "import subprocess\nsubprocess.run(command, shell=True)\n", "expected_rules": ["PY004"], "rationale": "subprocess with shell enabled"}
+{"id": "PY004-02", "source": "import os\nos.system(command)\n", "expected_rules": ["PY004"], "rationale": "os.system shell execution"}
+{"id": "PY004-N01", "source": "import subprocess\nsubprocess.run([program, argument], shell=False)\n", "expected_rules": [], "rationale": "Argument-list execution with shell disabled"}
+{"id": "PY004-N02", "source": "runner.run(command, shell=True)\n", "expected_rules": [], "rationale": "Unrelated run method"}
+{"id": "PY005-01", "source": "import yaml\nvalue = yaml.load(payload)\n", "expected_rules": ["PY005"], "rationale": "yaml.load without explicit safe loader"}
+{"id": "PY005-02", "source": "from yaml import load as parse_yaml\nvalue = parse_yaml(payload)\n", "expected_rules": ["PY005"], "rationale": "Imported yaml.load alias"}
+{"id": "PY005-N01", "source": "import yaml\nvalue = yaml.safe_load(payload)\n", "expected_rules": [], "rationale": "PyYAML safe_load"}
+{"id": "PY005-N02", "source": "config.load(payload)\n", "expected_rules": [], "rationale": "Unrelated load method"}
+{"id": "PY006-01", "source": "import requests\nresponse = requests.get(url, verify=False)\n", "expected_rules": ["PY006"], "rationale": "requests disables TLS verification"}
+{"id": "PY006-02", "source": "import httpx\nresponse = httpx.post(url, verify=False)\n", "expected_rules": ["PY006"], "rationale": "httpx disables TLS verification"}
+{"id": "PY006-N01", "source": "import requests\nresponse = requests.get(url, verify=True)\n", "expected_rules": [], "rationale": "TLS verification explicitly enabled"}
+{"id": "PY006-N02", "source": "import requests\nresponse = requests.get(url)\n", "expected_rules": [], "rationale": "Default TLS verification"}
+{"id": "PY001-03", "source": "import builtins\nbuiltins.eval(expression)\n", "expected_rules": ["PY001"], "rationale": "Qualified builtin eval"}
+{"id": "PY001-04", "source": "import builtins\ngetattr(builtins, \"eval\")(expression)\n", "expected_rules": ["PY001"], "rationale": "Dynamic lookup of builtin eval"}
+{"id": "PY001-N03", "source": "obj.eval(expression)\n", "expected_rules": [], "rationale": "Unrelated object's eval method"}
+{"id": "PY001-N04", "source": "def run(eval):\n    return eval(expression)\n", "expected_rules": [], "rationale": "Function parameter shadows eval"}
+{"id": "PY002-03", "source": "import builtins\nbuiltins.exec(source_text)\n", "expected_rules": ["PY002"], "rationale": "Qualified builtin exec"}
+{"id": "PY002-04", "source": "import builtins\ngetattr(builtins, \"exec\")(source_text)\n", "expected_rules": ["PY002"], "rationale": "Dynamic lookup of builtin exec"}
+{"id": "PY002-N03", "source": "obj.exec(source_text)\n", "expected_rules": [], "rationale": "Unrelated object's exec method"}
+{"id": "PY002-N04", "source": "def run(exec):\n    return exec(source_text)\n", "expected_rules": [], "rationale": "Function parameter shadows exec"}
+{"id": "PY003-03", "source": "import pickle\nvalue = pickle.Unpickler(stream).load()\n", "expected_rules": ["PY003"], "rationale": "Unpickler.load deserialization"}
+{"id": "PY003-04", "source": "import pickle as p\nvalue = p.load(stream)\n", "expected_rules": ["PY003"], "rationale": "Aliased pickle module"}
+{"id": "PY003-N03", "source": "import pickle\nvalue = pickle.dumps(data)\n", "expected_rules": [], "rationale": "Pickle serialization"}
+{"id": "PY003-N04", "source": "obj.loads(payload)\n", "expected_rules": [], "rationale": "Unrelated object's loads method"}
+{"id": "PY004-03", "source": "import os\nos.popen(command)\n", "expected_rules": ["PY004"], "rationale": "os.popen shell execution"}
+{"id": "PY004-04", "source": "import subprocess\nsubprocess.Popen(command, shell=True)\n", "expected_rules": ["PY004"], "rationale": "Popen with shell enabled"}
+{"id": "PY004-N03", "source": "import subprocess\nsubprocess.run(command, shell=enabled)\n", "expected_rules": [], "rationale": "Shell flag is dynamic rather than literal True", "unsupported_rules": ["PY004"]}
+{"id": "PY004-N04", "source": "runner.run(command, shell=True)\n", "expected_rules": [], "rationale": "Unrelated run method"}
+{"id": "PY005-03", "source": "import yaml\nvalue = yaml.load(data, Loader=yaml.Loader)\n", "expected_rules": ["PY005"], "rationale": "Explicit unsafe YAML loader"}
+{"id": "PY005-04", "source": "import yaml\nvalue = yaml.load(data, Loader=custom_loader)\n", "expected_rules": ["PY005"], "rationale": "Unverified custom YAML loader"}
+{"id": "PY005-N03", "source": "import yaml\nvalue = yaml.load(data, Loader=yaml.CSafeLoader)\n", "expected_rules": [], "rationale": "Explicit C safe YAML loader"}
+{"id": "PY005-N04", "source": "import yaml\nvalue = yaml.safe_load(data)\n", "expected_rules": [], "rationale": "Safe YAML API"}
+{"id": "PY006-03", "source": "import requests as http\nresponse = http.request(\"GET\", url, verify=False)\n", "expected_rules": ["PY006"], "rationale": "Aliased requests module disables TLS verification"}
+{"id": "PY006-04", "source": "import httpx\nresponse = httpx.get(url, verify=False)\n", "expected_rules": ["PY006"], "rationale": "httpx GET disables TLS verification"}
+{"id": "PY006-N03", "source": "import requests\nresponse = requests.get(url, verify=verify_setting)\n", "expected_rules": [], "rationale": "Dynamic TLS verification setting", "unsupported_rules": ["PY006"]}
+{"id": "PY006-N04", "source": "client.get(url, verify=False)\n", "expected_rules": [], "rationale": "Unrecognized client API"}

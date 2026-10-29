@@ -91,7 +91,9 @@ Text / JSON / SARIF reports
 | `src/ast_auditor/command_line.py` | CLI, JSON output, and SARIF generation |
 | `tests/` | Rule, CLI, output, and repository-scanning regression tests |
 | `examples/vulnerable_python.py` | Intentionally vulnerable test fixture; do not use as application code |
-| `scripts/benchmark_repository_scan.py` | Synthetic local benchmark harness |
+| `scripts/benchmark_repository_scan.py` | Repeated synthetic repository-scan benchmark |
+| `scripts/evaluate_detection.py` | Evaluation against a manually labelled detection corpus |
+| `evaluation/detection_corpus.jsonl` | Small labelled corpus for exploratory regression evaluation |
 | `SCALING_GUIDE.md` | Implemented capabilities and scaling roadmap |
 | `SECURITY_REVIEW.md` | Scope, limitations, and release checklist |
 | `CONTRIBUTING.md` | Development and rule-contribution guidance |
@@ -105,10 +107,31 @@ python -m pytest -q
 python -m ruff check src tests scripts
 python -m compileall -q src tests scripts
 python -m ast_auditor --list-rules
-python scripts/benchmark_repository_scan.py --files 10000 --jobs 4
+python scripts/evaluate_detection.py --output /tmp/ast-auditor-evaluation.json
+python scripts/benchmark_repository_scan.py --files 10000 --jobs 4 --repeats 5
 ```
 
-Benchmarks generate synthetic Python files. Record the machine, Python version, worker count, source size, elapsed time, peak memory, and error/finding counts when comparing results. Synthetic results are not evidence of production throughput or a million-file service-level objective.
+The repository-scan benchmark generates synthetic Python files, performs a warm-up, and reports repeated timing samples, median/minimum/maximum elapsed time, throughput, result consistency, and traced peak memory in the benchmark process. The memory measurement does not fully capture worker-process or native allocations. Record the machine, Python version, worker count, source size, elapsed time, and error/finding counts when comparing runs. Synthetic results are not evidence of production throughput or a million-file service-level objective.
+
+## Detection evaluation
+
+Run the exploratory evaluation against the included manually labelled JSONL corpus:
+
+```bash
+python scripts/evaluate_detection.py
+```
+
+Write the complete JSON report to a file as well as printing it:
+
+```bash
+python scripts/evaluate_detection.py --output /tmp/ast-auditor-evaluation.json
+```
+
+Routine evaluations write to a separate temporary report so the checked-in baseline remains unchanged. Update the baseline only after reviewing and intentionally accepting a new reference report.
+
+The evaluator reports per-rule and micro-averaged true positives, false positives, false negatives, true negatives, precision, recall, and F1, alongside case-level predictions and mismatches. Use `--corpus PATH` to evaluate a different labelled JSONL corpus and `--output PATH` to choose the report destination. The command exits with status `0` when there are no labelled mismatches, `1` when mismatches are found, and `2` when input or evaluation validation fails.
+
+The current starter corpus contains 48 cases covering six rules. Two rule/case combinations are explicitly marked unsupported and excluded from scoring. In the checked-in baseline report, the remaining 46 cases match their labels, with 24 true-positive rule labels and no false positives or false negatives. The resulting metrics describe only this small, manually labelled corpus; they are not a reliable estimate of general detection accuracy, real-world precision/recall, or production readiness. Expand the corpus with independently reviewed positive and negative cases before drawing broader conclusions.
 
 ## Security and trust boundaries
 
