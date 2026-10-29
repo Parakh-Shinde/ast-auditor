@@ -669,6 +669,31 @@ def test_comprehension_target_does_not_shadow_builtin_in_function() -> None:
     assert findings[0].rule_id == "PY001"
 
 
+def test_function_local_assignment_shadows_outer_eval_alias() -> None:
+    source = (
+        "run = eval\n"
+        "def check():\n"
+        "    run(data)\n"
+        "    run = print\n"
+    )
+    assert scan_source(source) == []
+
+
+def test_unreachable_except_target_does_not_hide_outer_eval_alias() -> None:
+    source = (
+        "runner = eval\n"
+        "try:\n"
+        "    pass\n"
+        "except Exception as runner:\n"
+        "    pass\n"
+        "runner(data)\n"
+    )
+    findings = scan_source(source)
+    assert len(findings) == 1
+    assert findings[0].rule_id == "PY001"
+    assert findings[0].line == 6
+
+
 def test_except_target_is_local_throughout_function() -> None:
     source = "def scan():\n    eval(data)\n    try:\n        pass\n    except Exception as eval:\n        pass\n"
     assert scan_source(source) == []
